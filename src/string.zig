@@ -12,7 +12,7 @@ const StringInitOptions = struct {
 
 pub fn String(comptime T: type) type {
     // @TODO: Figure out if a way of calculating new capacity is general enough where it should be
-    // the default. Alternatively, create different modes, i.e.;
+    // the default instead of "only what's needed". Alternatively, create different modes, i.e.;
     // `.Eager`: Eagerly allocates more space for more characters to be added. Some constant here?
     // `.Strict`: Allocates strictly what's necessary.
     // `.Bracketed([]u32)`(?):
