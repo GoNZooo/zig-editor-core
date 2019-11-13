@@ -105,6 +105,10 @@ pub fn String(comptime T: type) type {
             };
         }
 
+        // @TODO: create `insertSlice`
+
+        // @TODO: create `insertSliceCopy`
+
         /// Returns a mutable copy of the contents of the `String(T)`.
         /// The caller is responsible for calling `successful_return_value.deinit()`.
         pub fn sliceCopy(self: Self, allocator: *mem.Allocator) !Slice {
