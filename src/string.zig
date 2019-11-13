@@ -139,17 +139,6 @@ pub fn String(comptime T: type) type {
             };
         }
 
-        pub fn format(
-            self: Self,
-            comptime format_string: []const u8,
-            options: fmt.FormatOptions,
-            context: var,
-            comptime Errors: type,
-            output: fn (@typeOf(context), []const u8) Errors!void,
-        ) Errors!void {
-            return fmt.format(context, Errors, output, "{}", self.__chars[0..self.count]);
-        }
-
         /// Creates a `String(T)` with random content. A `rand.Random` struct can be passed into as
         /// an `option` in order to use a pre-initialized `Random`.
         /// The caller is responsible for calling `successful_return_value.deinit()`.
@@ -167,6 +156,17 @@ pub fn String(comptime T: type) type {
                 .count = count,
                 .allocator = allocator,
             };
+        }
+
+        pub fn format(
+            self: Self,
+            comptime format_string: []const u8,
+            options: fmt.FormatOptions,
+            context: var,
+            comptime Errors: type,
+            output: fn (@typeOf(context), []const u8) Errors!void,
+        ) Errors!void {
+            return fmt.format(context, Errors, output, "{}", self.__chars[0..self.count]);
         }
 
         fn getNewCapacity(self: Self, slice: ConstSlice) usize {
