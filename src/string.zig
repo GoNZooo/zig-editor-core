@@ -1,8 +1,6 @@
 const std = @import("std");
 const testing = std.testing;
-const ArrayList = std.ArrayList;
 const direct_allocator = std.heap.direct_allocator;
-const debug = std.debug;
 const mem = std.mem;
 const fmt = std.fmt;
 
