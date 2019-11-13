@@ -19,8 +19,10 @@ pub fn String(comptime T: type) type {
         const ConstSlice = []const T;
 
         allocator: *mem.Allocator,
-        chars: []T,
         capacity: usize,
+
+        // @NOTE: Regard as private
+        __chars: []T,
 
         /// Initializes the string, optionally allocating the amount of characters specified as the
         /// `initial_capacity` in `options`.
@@ -32,13 +34,13 @@ pub fn String(comptime T: type) type {
             const capacity = if (options.initial_capacity) |c| c else 0;
             var chars = if (options.initial_capacity) |c| try allocator.alloc(T, c) else [_]T{};
 
-            return Self{ .chars = chars, .capacity = capacity, .allocator = allocator };
+            return Self{ .__chars = chars, .capacity = capacity, .allocator = allocator };
         }
 
         /// Deinitializes the string, clearing all values inside of it and freeing the memory used.
         pub fn deinit(self: *Self) void {
-            self.allocator.free(self.chars);
-            self.chars = [_]T{};
+            self.allocator.free(self.__chars);
+            self.__chars = [_]T{};
             self.capacity = 0;
         }
 
@@ -49,7 +51,7 @@ pub fn String(comptime T: type) type {
             var chars = try mem.dupe(allocator, T, slice);
 
             return Self{
-                .chars = chars,
+                .__chars = chars,
                 .capacity = slice.len,
                 .allocator = allocator,
             };
@@ -59,19 +61,19 @@ pub fn String(comptime T: type) type {
         /// remains the same as the appended to string and the caller is not the owner of the memory.
         pub fn append(self: *Self, slice: ConstSlice) !void {
             const new_capacity = self.capacity + slice.len;
-            var chars = try self.allocator.realloc(self.chars, new_capacity);
+            var chars = try self.allocator.realloc(self.__chars, new_capacity);
             mem.copy(T, chars[self.capacity..], slice);
-            self.chars = chars;
+            self.__chars = chars;
             self.capacity = new_capacity;
         }
 
         /// Appends a `[]const T` onto a `String(T)`, creating a new `String(T)` from it.
         /// The caller is responsible for calling `successful_return_value.deinit()`.
         pub fn appendCopy(self: Self, allocator: *mem.Allocator, slice: ConstSlice) !Self {
-            var chars = try mem.concat(allocator, T, [_][]const T{ self.chars, slice });
+            var chars = try mem.concat(allocator, T, [_][]const T{ self.__chars, slice });
 
             return Self{
-                .chars = chars,
+                .__chars = chars,
                 .capacity = chars.len,
                 .allocator = allocator,
             };
@@ -80,14 +82,14 @@ pub fn String(comptime T: type) type {
         /// Returns a mutable copy of the contents of the `String(T)`.
         /// The caller is responsible for calling `successful_return_value.deinit()`.
         pub fn sliceCopy(self: Self, allocator: *mem.Allocator) !Slice {
-            var chars = try mem.dupe(allocator, T, self.chars);
+            var chars = try mem.dupe(allocator, T, self.__chars);
 
             return chars;
         }
 
         /// Returns an immutable copy of the contents of the `String(T)`.
         pub fn sliceConst(self: Self) ConstSlice {
-            return self.chars;
+            return self.__chars;
         }
 
         /// Creates a `String(T)` from a format string.
@@ -100,7 +102,7 @@ pub fn String(comptime T: type) type {
         ) !Self {
             const chars = try fmt.allocPrint(direct_allocator, format_string, args);
             const capacity = chars.len;
-            return Self{ .chars = chars, .capacity = capacity, .allocator = allocator };
+            return Self{ .__chars = chars, .capacity = capacity, .allocator = allocator };
         }
 
         pub fn format(
@@ -111,7 +113,7 @@ pub fn String(comptime T: type) type {
             comptime Errors: type,
             output: fn (@typeOf(context), []const u8) Errors!void,
         ) Errors!void {
-            return fmt.format(context, Errors, output, "{}", self.chars);
+            return fmt.format(context, Errors, output, "{}", self.__chars);
         }
     };
 }
@@ -121,8 +123,12 @@ test "`appendCopy` doesn't disturb original string, `copyConst` copies static st
     try string2.append(" there");
     var string3 = try string2.appendCopy(direct_allocator, "wat");
 
-    testing.expectEqualSlices(u8, string2.chars, string3.chars[0..string2.chars.len]);
-    testing.expect(&string2.chars[0] != &string3.chars[0]);
+    testing.expectEqualSlices(
+        u8,
+        string2.sliceConst(),
+        string3.__chars[0..string2.sliceConst().len],
+    );
+    testing.expect(&string2.sliceConst()[0] != &string3.sliceConst()[0]);
     testing.expect(string3.capacity == 14);
     string3.deinit();
     testing.expect(string3.capacity == 0);
@@ -157,7 +163,7 @@ test "`fromFormat` returns a correct `String`" {
     const expected_chars = "/home/gonz/.zshrc:5:3";
     const expected_capacity = expected_chars.len;
 
-    testing.expectEqualSlices(u8, string_from_format.chars, expected_chars);
+    testing.expectEqualSlices(u8, string_from_format.sliceConst(), expected_chars);
     testing.expectEqual(string_from_format.capacity, expected_capacity);
     testing.expectEqual(string_from_format.allocator, direct_allocator);
 }
