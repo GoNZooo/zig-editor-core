@@ -226,10 +226,10 @@ test "`fromFormat` returns a correct `String`" {
         @as(u8, line),
         @as(u8, column),
     );
-    const expected_chars = "/home/gonz/.zshrc:5:3";
-    const expected_capacity = expected_chars.len;
+    const expected_slice = "/home/gonz/.zshrc:5:3";
+    const expected_capacity = expected_slice.len;
 
-    testing.expectEqualSlices(u8, string_from_format.sliceConst(), expected_chars);
+    testing.expectEqualSlices(u8, string_from_format.sliceConst(), expected_slice);
     testing.expectEqual(string_from_format.capacity, expected_capacity);
     testing.expectEqual(string_from_format.allocator, direct_allocator);
 }
