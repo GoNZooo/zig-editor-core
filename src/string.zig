@@ -4,6 +4,7 @@ const direct_allocator = std.heap.direct_allocator;
 const mem = std.mem;
 const fmt = std.fmt;
 const rand = std.rand;
+const assert = std.debug.assert;
 
 pub const StringInitOptions = struct {
     initial_capacity: ?usize = null,
@@ -105,7 +106,28 @@ pub fn String(comptime T: type) type {
             };
         }
 
-        // @TODO: create `insertSlice`
+        /// Copies the contents of `slice` into the `String` at `position` (0-indexed).
+        /// Since this modifies an already existing string the responsibility of freeing memory
+        /// still lies in the user of the `String`.
+        pub fn insertSlice(self: *Self, position: usize, slice: ConstSlice) !void {
+            const new_capacity = self.getNewCapacity(slice);
+            var characters = self.__chars;
+            if (new_capacity > self.capacity) {
+                characters = try self.allocator.realloc(characters, new_capacity);
+            }
+            const slice_to_copy_forward = characters[position..self.count];
+            const new_start_position = position + slice.len;
+            mem.copy(
+                T,
+                characters[new_start_position..(new_start_position + slice_to_copy_forward.len)],
+                slice_to_copy_forward,
+            );
+            mem.copy(T, characters[position..(position + slice.len)], slice);
+
+            self.capacity = new_capacity;
+            self.count += slice.len;
+            self.__chars = characters;
+        }
 
         // @TODO: create `insertSliceCopy`
 
@@ -226,6 +248,14 @@ test "`appendCopy` doesn't disturb original string, `copyConst` copies static st
     string3.deinit();
     testing.expect(string3.capacity == 0);
     testing.expect(string2.capacity == 11);
+}
+
+test "`insertSlice` inserts a string into an already created string" {
+    var string = try String(u8).copyConst(direct_allocator, "hello!");
+    try string.insertSlice(5, "lo");
+    testing.expectEqualSlices(u8, string.sliceConst(), "hellolo!");
+    try string.insertSlice(5, ", bo");
+    testing.expectEqualSlices(u8, string.sliceConst(), "hello, bolo!");
 }
 
 test "`format` returns a custom format instead of everything" {
