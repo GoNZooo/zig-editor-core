@@ -118,7 +118,10 @@ pub fn String(comptime T: type) type {
         }
 
         /// Creates a `String(T)` from a format string.
-        /// Example: `const string = try fromFormat("{}/{}_{}.txt", dir, filename, version);`
+        /// Example:
+        /// ```
+        /// const string = try String(u8).fromFormat("{}/{}_{}.txt", dir, filename, version);
+        /// ```
         /// The caller is responsible for calling `successful_return_value.deinit()`.
         pub fn fromFormat(
             allocator: *mem.Allocator,
