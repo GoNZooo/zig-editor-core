@@ -48,6 +48,8 @@ pub fn String(comptime T: type) type {
 
         /// Deinitializes the string, clearing all values inside of it and freeing the memory used.
         pub fn deinit(self: *Self) void {
+            // @TODO: Determine whether or not it's better to have invalid memory here so that it
+            // can be caught, instead of producing a valid empty slice.
             self.allocator.free(self.__chars);
             self.__chars = [_]T{};
             self.capacity = 0;
