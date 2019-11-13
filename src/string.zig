@@ -154,6 +154,7 @@ pub fn String(comptime T: type) type {
         /// an `option` in order to use a pre-initialized `Random`.
         /// The caller is responsible for calling `successful_return_value.deinit()`.
         pub fn random(allocator: *mem.Allocator, options: RandomSliceOptions) !Self {
+            // @TODO: fix this for at least u16 or something
             if (T != u8) @compileError("`.random()` only works with u8 `String`s for now");
 
             var slice = try randomU8Slice(allocator, options);
