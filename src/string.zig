@@ -3,8 +3,9 @@ const testing = std.testing;
 const direct_allocator = std.heap.direct_allocator;
 const mem = std.mem;
 const fmt = std.fmt;
+const rand = std.rand;
 
-const StringInitOptions = struct {
+pub const StringInitOptions = struct {
     initial_capacity: ?usize = null,
 };
 
@@ -149,6 +150,24 @@ pub fn String(comptime T: type) type {
             return fmt.format(context, Errors, output, "{}", self.__chars[0..self.count]);
         }
 
+        /// Creates a `String(T)` with random content. A `rand.Random` struct can be passed into as
+        /// an `option` in order to use a pre-initialized `Random`.
+        /// The caller is responsible for calling `successful_return_value.deinit()`.
+        pub fn random(allocator: *mem.Allocator, options: RandomSliceOptions) !Self {
+            if (T != u8) @compileError("`.random()` only works with u8 `String`s for now");
+
+            var slice = try randomU8Slice(allocator, options);
+            const capacity = slice.len;
+            const count = slice.len;
+
+            return Self{
+                .__chars = slice,
+                .capacity = capacity,
+                .count = count,
+                .allocator = allocator,
+            };
+        }
+
         fn getNewCapacity(self: Self, slice: ConstSlice) usize {
             return max(@typeOf(self.capacity), self.capacity, self.count + slice.len);
         }
@@ -237,7 +256,48 @@ test "`fromFormat` returns a correct `String`" {
     testing.expectEqual(string_from_format.allocator, direct_allocator);
 }
 
+test "`random` works" {
+    const string = try String(u8).random(direct_allocator, RandomSliceOptions{});
+    const slice = string.sliceConst();
+    testing.expect(slice.len < 251);
+    for (slice) |c| {
+        testing.expect(c <= 255);
+    }
+}
+
 // This probably exists somewhere but I'm not wasting time looking for it
 fn max(comptime T: type, a: T, b: T) T {
     return if (a > b) a else b;
+}
+
+test "`randomU8Slice`" {
+    const slice = try randomU8Slice(direct_allocator, RandomSliceOptions{});
+    testing.expect(slice.len < 251);
+    for (slice) |c| {
+        testing.expect(c <= 255);
+    }
+}
+
+pub const RandomSliceOptions = struct {
+    length: ?usize = null,
+    random: ?*rand.Random = null,
+};
+
+fn randomU8Slice(
+    allocator: *mem.Allocator,
+    options: RandomSliceOptions,
+) ![]u8 {
+    var random = if (options.random) |r| r else blk: {
+        var buf: [8]u8 = undefined;
+        try std.crypto.randomBytes(buf[0..]);
+        const seed = mem.readIntSliceLittle(u64, buf[0..8]);
+        break :blk &rand.DefaultPrng.init(seed).random;
+    };
+    const length = if (options.length) |l| l else random.uintAtMost(usize, 250);
+    var slice_characters = try allocator.alloc(u8, length);
+    for (slice_characters) |*c| {
+        c.* = random.uintAtMost(u8, 255);
+    }
+
+    return slice_characters;
 }
