@@ -82,7 +82,7 @@ pub fn String(comptime T: type) type {
         /// If the current capacity of the string is enough to hold the new string no new memory
         /// will be allocated.
         pub fn append(self: *Self, slice: ConstSlice) !void {
-            const new_capacity = self.getNewCapacity(slice);
+            const new_capacity = self.getRequiredCapacity(slice);
             var chars = self.__chars;
             if (new_capacity > self.capacity) {
                 chars = try self.allocator.realloc(self.__chars, new_capacity);
@@ -115,7 +115,7 @@ pub fn String(comptime T: type) type {
         /// Since this modifies an already existing string the responsibility of freeing memory
         /// still lies in the user of the `String`.
         pub fn insertSlice(self: *Self, position: usize, slice: ConstSlice) !void {
-            const new_capacity = self.getNewCapacity(slice);
+            const new_capacity = self.getRequiredCapacity(slice);
             var characters = self.__chars;
             if (new_capacity > self.capacity) {
                 characters = try self.allocator.realloc(characters, new_capacity);
@@ -269,7 +269,7 @@ pub fn String(comptime T: type) type {
             return fmt.format(context, Errors, output, "{}", self.__chars[0..self.count]);
         }
 
-        fn getNewCapacity(self: Self, slice: ConstSlice) usize {
+        fn getRequiredCapacity(self: Self, slice: ConstSlice) usize {
             return utilities.max(@typeOf(self.capacity), self.capacity, self.count + slice.len);
         }
     };
