@@ -129,10 +129,40 @@ pub fn String(comptime T: type) type {
             self.__chars = characters;
         }
 
-        // @TODO: create `insertSliceCopy`
+        /// Copies the contents of `slice` into a copy of `String` at `position` (0-indexed).
+        /// The caller is responsible for calling `successful_return_value.deinit()`.
+        pub fn insertSliceCopy(
+            self: Self,
+            allocator: *mem.Allocator,
+            position: usize,
+            slice: ConstSlice,
+        ) !Self {
+            const capacity = self.count + slice.len;
+            var characters = try allocator.alloc(T, self.count + slice.len);
+            const slice_to_copy_forward = self.__chars[position..self.count];
+            const new_start_position = position + slice.len;
+            mem.copy(T, characters[0..position], self.__chars[0..position]);
+            mem.copy(
+                T,
+                characters[new_start_position..(new_start_position + slice_to_copy_forward.len)],
+                slice_to_copy_forward,
+            );
+            mem.copy(
+                T,
+                characters[position..(position + slice.len)],
+                slice,
+            );
+
+            return Self{
+                .__chars = characters,
+                .capacity = capacity,
+                .count = characters.len,
+                .allocator = allocator,
+            };
+        }
 
         /// Returns a mutable copy of the contents of the `String(T)`.
-        /// The caller is responsible for calling `successful_return_value.deinit()`.
+        /// caller is responsible for calling `successful_return_value.deinit()`.
         pub fn sliceCopy(self: Self, allocator: *mem.Allocator) !Slice {
             var chars = try mem.dupe(allocator, T, self.__chars[0..self.count]);
 
@@ -256,6 +286,14 @@ test "`insertSlice` inserts a string into an already created string" {
     testing.expectEqualSlices(u8, string.sliceConst(), "hellolo!");
     try string.insertSlice(5, ", bo");
     testing.expectEqualSlices(u8, string.sliceConst(), "hello, bolo!");
+}
+
+test "`insertSliceCopy` inserts a string into a copy of a `String`" {
+    var string = try String(u8).copyConst(direct_allocator, "hello!");
+    const string2 = try string.insertSliceCopy(direct_allocator, 5, "lo");
+    testing.expectEqualSlices(u8, string2.sliceConst(), "hellolo!");
+    const string3 = try string2.insertSliceCopy(direct_allocator, 5, ", bo");
+    testing.expectEqualSlices(u8, string3.sliceConst(), "hello, bolo!");
 }
 
 test "`format` returns a custom format instead of everything" {
