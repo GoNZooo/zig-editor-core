@@ -187,6 +187,26 @@ pub fn String(comptime T: type) type {
             self.count = count;
         }
 
+        /// Deletes a slice inside the string, from `start` to but not including `end` (0-indexed)
+        /// and returns a new `String`.
+        /// The caller is responsible for calling `successful_return_value.deinit()`.
+        pub fn deleteCopy(self: Self, allocator: *mem.Allocator, start: usize, end: usize) !Self {
+            assert(start <= end);
+            const slice_to_remove = self.__chars[start..end];
+            const slice_after_removed_space = self.__chars[end..self.count];
+            var characters = try allocator.alloc(T, self.count - slice_to_remove.len);
+
+            mem.copy(T, characters[0..start], self.__chars[0..start]);
+            mem.copy(T, characters[start..], slice_after_removed_space);
+
+            return Self{
+                .__chars = characters,
+                .count = characters.len,
+                .capacity = characters.len,
+                .allocator = allocator,
+            };
+        }
+
         /// Returns a mutable copy of the contents of the `String(T)`.
         /// caller is responsible for calling `successful_return_value.deinit()`.
         pub fn sliceCopy(self: Self, allocator: *mem.Allocator) !Slice {
@@ -346,6 +366,17 @@ test "`format` returns a custom format instead of everything" {
     );
 
     testing.expectEqualSlices(u8, format_output, "hello! 1!");
+}
+
+test "`deleteCopy` deletes" {
+    var string = try String(u8).copyConst(direct_allocator, "hello, bolo!");
+    const string2 = try string.deleteCopy(direct_allocator, 1, 4);
+    testing.expectEqualSlices(u8, string2.sliceConst(), "ho, bolo!");
+    testing.expectEqual(string2.capacity, 9);
+
+    const string3 = try string2.deleteCopy(direct_allocator, 2, 8);
+    testing.expectEqualSlices(u8, string3.sliceConst(), "ho!");
+    testing.expectEqual(string3.capacity, 3);
 }
 
 test "`fromFormat` returns a correct `String`" {
