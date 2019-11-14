@@ -169,17 +169,14 @@ pub fn String(comptime T: type) type {
         /// The memory is conditionally shrunk based on the `shrink` member in `options` being
         /// `true` or `false.
         pub fn delete(self: *Self, start: usize, end: usize, options: DeleteOptions) void {
-            // determine the slice
+            assert(start <= end);
             const slice_to_remove = self.__chars[start..end];
-
-            // move what's after the slice (end of slice <-> end of string) to where slice starts
             const slice_after_removed_space = self.__chars[end..self.count];
+
             mem.copy(T, self.__chars[start..self.count], slice_after_removed_space);
 
-            // determine the new count based on the removed slice (count - slice size)
             const count = self.count - slice_to_remove.len;
 
-            // conditionally shrink the memory down to that count
             if (options.shrink) {
                 self.__chars = self.allocator.shrink(self.__chars, count);
                 self.capacity = count;
