@@ -10,6 +10,10 @@ pub const StringInitOptions = struct {
     initial_capacity: ?usize = null,
 };
 
+pub const DeleteOptions = struct {
+    shrink: bool = false,
+};
+
 pub fn String(comptime T: type) type {
     // @TODO: Figure out if a way of calculating new capacity is general enough where it should be
     // the default instead of "only what's needed". Alternatively, create different modes, i.e.;
@@ -161,6 +165,28 @@ pub fn String(comptime T: type) type {
             };
         }
 
+        /// Deletes a slice inside the string, from `start` to but not including `end` (0-indexed).
+        /// The memory is conditionally shrunk based on the `shrink` member in `options` being
+        /// `true` or `false.
+        pub fn delete(self: *Self, start: usize, end: usize, options: DeleteOptions) void {
+            // determine the slice
+            const slice_to_remove = self.__chars[start..end];
+
+            // move what's after the slice (end of slice <-> end of string) to where slice starts
+            const slice_after_removed_space = self.__chars[end..self.count];
+            mem.copy(T, self.__chars[start..self.count], slice_after_removed_space);
+
+            // determine the new count based on the removed slice (count - slice size)
+            const count = self.count - slice_to_remove.len;
+
+            // conditionally shrink the memory down to that count
+            if (options.shrink) {
+                self.__chars = self.allocator.shrink(self.__chars, count);
+                self.capacity = count;
+            }
+            self.count = count;
+        }
+
         /// Returns a mutable copy of the contents of the `String(T)`.
         /// caller is responsible for calling `successful_return_value.deinit()`.
         pub fn sliceCopy(self: Self, allocator: *mem.Allocator) !Slice {
@@ -294,6 +320,12 @@ test "`insertSliceCopy` inserts a string into a copy of a `String`" {
     testing.expectEqualSlices(u8, string2.sliceConst(), "hellolo!");
     const string3 = try string2.insertSliceCopy(direct_allocator, 5, ", bo");
     testing.expectEqualSlices(u8, string3.sliceConst(), "hello, bolo!");
+}
+
+test "`delete` deletes" {
+    var string = try String(u8).copyConst(direct_allocator, "hello!");
+    string.delete(1, 4, DeleteOptions{});
+    testing.expectEqualSlices(u8, string.sliceConst(), "ho!");
 }
 
 test "`format` returns a custom format instead of everything" {
