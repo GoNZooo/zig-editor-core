@@ -326,6 +326,14 @@ test "`delete` deletes" {
     var string = try String(u8).copyConst(direct_allocator, "hello!");
     string.delete(1, 4, DeleteOptions{});
     testing.expectEqualSlices(u8, string.sliceConst(), "ho!");
+    testing.expectEqual(string.capacity, 6);
+}
+
+test "`delete` deletes and shrinks if given the option" {
+    var string = try String(u8).copyConst(direct_allocator, "hello!");
+    string.delete(1, 4, DeleteOptions{ .shrink = true });
+    testing.expectEqualSlices(u8, string.sliceConst(), "ho!");
+    testing.expectEqual(string.capacity, 3);
 }
 
 test "`format` returns a custom format instead of everything" {
