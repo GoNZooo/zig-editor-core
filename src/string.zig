@@ -438,3 +438,5 @@ fn randomU8Slice(
 
     return slice_characters;
 }
+
+pub fn runTests() void {}
