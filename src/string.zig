@@ -5,6 +5,7 @@ const mem = std.mem;
 const fmt = std.fmt;
 const rand = std.rand;
 const assert = std.debug.assert;
+const utilities = @import("./utilities.zig");
 
 pub const StringInitOptions = struct {
     initial_capacity: ?usize = null,
@@ -269,7 +270,7 @@ pub fn String(comptime T: type) type {
         }
 
         fn getNewCapacity(self: Self, slice: ConstSlice) usize {
-            return max(@typeOf(self.capacity), self.capacity, self.count + slice.len);
+            return utilities.max(@typeOf(self.capacity), self.capacity, self.count + slice.len);
         }
     };
 }
@@ -404,11 +405,6 @@ test "`random` works" {
     for (slice) |c| {
         testing.expect(c <= 255);
     }
-}
-
-// This probably exists somewhere but I'm not wasting time looking for it
-fn max(comptime T: type, a: T, b: T) T {
-    return if (a > b) a else b;
 }
 
 test "`randomU8Slice`" {
