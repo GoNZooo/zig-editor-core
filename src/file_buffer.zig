@@ -52,6 +52,7 @@ pub fn FileBuffer(comptime T: type) type {
             self.allocator.free(self.__lines);
             self.count = 0;
             self.capacity = 0;
+            self.__lines = [_]T{};
         }
 
         // Returns a const slice of the lines in the `FileBuffer`
@@ -158,7 +159,6 @@ test "`deinit` frees the memory in the `FileBuffer`" {
     try file_buffer.append(direct_allocator, lines_to_add);
     const file_buffer_lines = file_buffer.lines();
     const file_buffer_line_1_content = file_buffer_lines[0].__chars;
-    std.debug.warn("\n{}\n", file_buffer_line_1_content);
     testing.expectEqual(file_buffer.count, 2);
     testing.expectEqual(file_buffer.capacity, 2);
     file_buffer.deinit();
