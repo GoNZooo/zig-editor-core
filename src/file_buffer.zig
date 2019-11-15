@@ -43,6 +43,18 @@ pub fn FileBuffer(comptime T: type) type {
             };
         }
 
+        pub fn deinit(self: *Self) void {
+            for (self.__lines) |*l| {
+                if (@hasDecl(@typeOf(l.*), "deinit")) {
+                    l.deinit();
+                }
+            }
+            self.allocator.free(self.__lines);
+            self.count = 0;
+            self.capacity = 0;
+        }
+
+        // Returns a const slice of the lines in the `FileBuffer`
         pub fn lines(self: Self) ConstLines {
             return self.__lines[0..self.count];
         }
@@ -134,6 +146,22 @@ pub fn FileBuffer(comptime T: type) type {
             return utilities.max(usize, self.capacity, self.count + lines_to_add.len);
         }
     };
+}
+
+test "`deinit` frees the memory in the `FileBuffer`" {
+    var file_buffer = try FileBuffer(String(u8)).init(direct_allocator, FileBufferOptions{});
+    testing.expectEqual(file_buffer.count, 0);
+
+    const string1 = try String(u8).copyConst(direct_allocator, "hello");
+    const string2 = try String(u8).copyConst(direct_allocator, "there");
+    const lines_to_add = ([_]String(u8){ string1, string2 })[0..];
+    try file_buffer.append(direct_allocator, lines_to_add);
+    const file_buffer_lines = file_buffer.lines();
+    const file_buffer_line_1_content = file_buffer_lines[0].__chars;
+    std.debug.warn("\n{}\n", file_buffer_line_1_content);
+    testing.expectEqual(file_buffer.count, 2);
+    testing.expectEqual(file_buffer.capacity, 2);
+    file_buffer.deinit();
 }
 
 test "`append` appends lines" {
