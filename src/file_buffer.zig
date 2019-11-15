@@ -51,6 +51,8 @@ pub fn FileBuffer(comptime T: type) type {
             self.count += lines_to_add.len;
         }
 
+        // @TODO: add `appendCopy`
+
         fn getRequiredCapacity(self: Self, lines_to_add: ConstLines) usize {
             return utilities.max(usize, self.capacity, self.count + lines_to_add.len);
         }
