@@ -14,6 +14,10 @@ const RemoveOptions = struct {
     shrink: bool = false,
 };
 
+const AppendCopyOptions = struct {
+    shrink: bool = false,
+};
+
 pub fn FileBuffer(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -56,7 +60,24 @@ pub fn FileBuffer(comptime T: type) type {
             self.count += lines_to_add.len;
         }
 
-        // @TODO: add `appendCopy`
+        pub fn appendCopy(
+            self: Self,
+            allocator: *mem.Allocator,
+            lines_to_add: ConstLines,
+            options: AppendCopyOptions,
+        ) !Self {
+            const capacity = if (options.shrink) (self.count + lines_to_add.len) else self.capacity;
+            var allocated_lines = try allocator.alloc(T, capacity);
+
+            mem.copy(T, allocated_lines[self.count..], lines_to_add);
+
+            return Self{
+                .capacity = capacity,
+                .count = self.count + lines_to_add.len,
+                .__lines = allocated_lines,
+                .allocator = allocator,
+            };
+        }
 
         pub fn remove(self: *Self, start: usize, end: usize, options: RemoveOptions) void {
             assert(start <= end);
@@ -148,6 +169,54 @@ test "`append` appends lines but doesn't increase capacity if already sufficient
     for (file_buffer.lines()) |line, i| {
         testing.expectEqualSlices(u8, line.sliceConst(), lines_to_add[i].sliceConst());
     }
+}
+
+test "`appendCopy` appends lines" {
+    var file_buffer = try FileBuffer(String(u8)).init(direct_allocator, FileBufferOptions{
+        .initial_capacity = 120,
+    });
+    testing.expectEqual(file_buffer.count, 0);
+
+    const string1 = try String(u8).copyConst(direct_allocator, "hello");
+    const string2 = try String(u8).copyConst(direct_allocator, "there");
+
+    const lines_to_add = ([_]String(u8){ string1, string2 })[0..];
+    var file_buffer2 = try file_buffer.appendCopy(
+        direct_allocator,
+        lines_to_add,
+        AppendCopyOptions{},
+    );
+    testing.expectEqual(file_buffer2.count, 2);
+    testing.expectEqual(file_buffer2.capacity, 120);
+    for (file_buffer2.lines()) |line, i| {
+        testing.expectEqualSlices(u8, line.sliceConst(), lines_to_add[i].sliceConst());
+    }
+    testing.expectEqual(file_buffer.count, 0);
+    testing.expectEqual(file_buffer.capacity, 120);
+}
+
+test "`appendCopy` appends lines and shrinks if given the option" {
+    var file_buffer = try FileBuffer(String(u8)).init(direct_allocator, FileBufferOptions{
+        .initial_capacity = 120,
+    });
+    testing.expectEqual(file_buffer.count, 0);
+
+    const string1 = try String(u8).copyConst(direct_allocator, "hello");
+    const string2 = try String(u8).copyConst(direct_allocator, "there");
+
+    const lines_to_add = ([_]String(u8){ string1, string2 })[0..];
+    var file_buffer2 = try file_buffer.appendCopy(
+        direct_allocator,
+        lines_to_add,
+        AppendCopyOptions{ .shrink = true },
+    );
+    testing.expectEqual(file_buffer2.count, 2);
+    testing.expectEqual(file_buffer2.capacity, 2);
+    for (file_buffer2.lines()) |line, i| {
+        testing.expectEqualSlices(u8, line.sliceConst(), lines_to_add[i].sliceConst());
+    }
+    testing.expectEqual(file_buffer.count, 0);
+    testing.expectEqual(file_buffer.capacity, 120);
 }
 
 test "`remove` removes" {
