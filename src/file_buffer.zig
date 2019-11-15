@@ -4,9 +4,14 @@ const direct_allocator = std.heap.direct_allocator;
 const testing = std.testing;
 const utilities = @import("./utilities.zig");
 const String = @import("./string.zig").String;
+const assert = std.debug.assert;
 
 const FileBufferOptions = struct {
     initial_capacity: ?usize = null,
+};
+
+const RemoveOptions = struct {
+    shrink: bool = false,
 };
 
 pub fn FileBuffer(comptime T: type) type {
@@ -53,9 +58,56 @@ pub fn FileBuffer(comptime T: type) type {
 
         // @TODO: add `appendCopy`
 
-        // @TODO: add `delete`
+        pub fn remove(self: *Self, start: usize, end: usize, options: RemoveOptions) void {
+            assert(start <= end);
+            assert(end <= self.count);
+            const lines_before_deletion = self.__lines[0..start];
+            const lines_after_deletion = self.__lines[end..self.count];
+            const count_difference = end - start;
+            const count = self.count - count_difference;
 
-        // @TODO: add `deleteCopy`
+            var allocated_lines = self.__lines;
+            if (options.shrink) {
+                allocated_lines = self.allocator.shrink(self.__lines, count);
+                self.capacity = allocated_lines.len;
+            }
+
+            mem.copy(T, allocated_lines[0..start], lines_before_deletion);
+            mem.copy(T, allocated_lines[start..count], lines_after_deletion);
+            self.count = count;
+            self.capacity = allocated_lines.len;
+        }
+
+        pub fn removeCopy(
+            self: Self,
+            allocator: *mem.Allocator,
+            start: usize,
+            end: usize,
+            options: RemoveOptions,
+        ) !Self {
+            assert(start <= end);
+            assert(end <= self.count);
+            const lines_before_deletion = self.__lines[0..start];
+            const lines_after_deletion = self.__lines[end..self.count];
+            const count_difference = end - start;
+            const count = self.count - count_difference;
+
+            var allocated_lines = if (options.shrink) shrink: {
+                break :shrink try allocator.alloc(T, count);
+            } else no_shrink: {
+                break :no_shrink try allocator.alloc(T, self.count);
+            };
+
+            mem.copy(T, allocated_lines[0..start], lines_before_deletion);
+            mem.copy(T, allocated_lines[start..count], lines_after_deletion);
+
+            return Self{
+                .count = count,
+                .capacity = allocated_lines.len,
+                .__lines = allocated_lines,
+                .allocator = allocator,
+            };
+        }
 
         fn getRequiredCapacity(self: Self, lines_to_add: ConstLines) usize {
             return utilities.max(usize, self.capacity, self.count + lines_to_add.len);
@@ -76,6 +128,7 @@ test "`append` appends lines" {
     testing.expectEqual(file_buffer.capacity, 2);
     for (file_buffer.lines()) |line, i| {
         testing.expectEqualSlices(u8, line.sliceConst(), lines_to_add[i].sliceConst());
+        testing.expect(&line != &lines_to_add[i]);
     }
 }
 
@@ -95,6 +148,64 @@ test "`append` appends lines but doesn't increase capacity if already sufficient
     for (file_buffer.lines()) |line, i| {
         testing.expectEqualSlices(u8, line.sliceConst(), lines_to_add[i].sliceConst());
     }
+}
+
+test "`remove` removes" {
+    var file_buffer = try FileBuffer(String(u8)).init(direct_allocator, FileBufferOptions{});
+    const string1 = try String(u8).copyConst(direct_allocator, "hello");
+    const string2 = try String(u8).copyConst(direct_allocator, "there");
+    const string3 = try String(u8).copyConst(direct_allocator, "handsome");
+    const lines_to_add = ([_]String(u8){ string1, string2, string3 })[0..];
+    try file_buffer.append(direct_allocator, lines_to_add);
+    file_buffer.remove(1, 2, RemoveOptions{});
+    testing.expectEqual(file_buffer.capacity, 3);
+    testing.expectEqual(file_buffer.count, 2);
+    testing.expectEqualSlices(u8, file_buffer.lines()[0].sliceConst(), string1.sliceConst());
+    testing.expectEqualSlices(u8, file_buffer.lines()[1].sliceConst(), string3.sliceConst());
+}
+
+test "`remove` removes and shrinks when `shrink` option is `true`" {
+    var file_buffer = try FileBuffer(String(u8)).init(direct_allocator, FileBufferOptions{});
+    const string1 = try String(u8).copyConst(direct_allocator, "hello");
+    const string2 = try String(u8).copyConst(direct_allocator, "there");
+    const string3 = try String(u8).copyConst(direct_allocator, "handsome");
+    const lines_to_add = ([_]String(u8){ string1, string2, string3 })[0..];
+    try file_buffer.append(direct_allocator, lines_to_add);
+    file_buffer.remove(1, 2, RemoveOptions{ .shrink = true });
+    testing.expectEqual(file_buffer.capacity, 2);
+    testing.expectEqual(file_buffer.count, 2);
+    testing.expectEqualSlices(u8, file_buffer.lines()[0].sliceConst(), string1.sliceConst());
+    testing.expectEqualSlices(u8, file_buffer.lines()[1].sliceConst(), string3.sliceConst());
+}
+
+test "`removeCopy` removes and gives a new `FileBuffer`" {
+    var file_buffer = try FileBuffer(String(u8)).init(direct_allocator, FileBufferOptions{});
+    const string1 = try String(u8).copyConst(direct_allocator, "hello");
+    const string2 = try String(u8).copyConst(direct_allocator, "there");
+    const string3 = try String(u8).copyConst(direct_allocator, "handsome");
+    const lines_to_add = ([_]String(u8){ string1, string2, string3 })[0..];
+    try file_buffer.append(direct_allocator, lines_to_add);
+    var file_buffer2 = try file_buffer.removeCopy(direct_allocator, 1, 2, RemoveOptions{});
+    testing.expectEqual(file_buffer2.capacity, 3);
+    testing.expectEqual(file_buffer2.count, 2);
+    testing.expectEqualSlices(u8, file_buffer2.lines()[0].sliceConst(), string1.sliceConst());
+    testing.expectEqualSlices(u8, file_buffer2.lines()[1].sliceConst(), string3.sliceConst());
+}
+
+test "`removeCopy` removes and gives a new `FileBuffer` and can shrink" {
+    var file_buffer = try FileBuffer(String(u8)).init(direct_allocator, FileBufferOptions{});
+    const string1 = try String(u8).copyConst(direct_allocator, "hello");
+    const string2 = try String(u8).copyConst(direct_allocator, "there");
+    const string3 = try String(u8).copyConst(direct_allocator, "handsome");
+    const lines_to_add = ([_]String(u8){ string1, string2, string3 })[0..];
+    try file_buffer.append(direct_allocator, lines_to_add);
+    var file_buffer2 = try file_buffer.removeCopy(direct_allocator, 1, 2, RemoveOptions{
+        .shrink = true,
+    });
+    testing.expectEqual(file_buffer2.capacity, 2);
+    testing.expectEqual(file_buffer2.count, 2);
+    testing.expectEqualSlices(u8, file_buffer2.lines()[0].sliceConst(), string1.sliceConst());
+    testing.expectEqualSlices(u8, file_buffer2.lines()[1].sliceConst(), string3.sliceConst());
 }
 
 pub fn runTests() void {}
