@@ -19,7 +19,7 @@ pub const Verb = union(enum) {
 };
 
 const WaitingForMotionData = struct {
-    range: u32,
+    range: ?u32,
     verb: Verb,
 };
 
@@ -31,16 +31,20 @@ const ParseState = union(enum) {
 pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb) {
     var verbs = ArrayList(Verb).init(allocator);
     var state: ParseState = ParseState.WaitingForVerbOrRangeModifier;
-    var range_modifier: u32 = 1;
+    var range_modifier: ?u32 = null;
     var number_of_range_modifiers: u32 = 0;
     for (input) |c| {
         switch (state) {
             ParseState.WaitingForVerbOrRangeModifier => {
                 switch (c) {
-                    '0'...'9' => {
+                    '1'...'9' => {
                         const numeric_value = c - '0';
-                        const power = std.math.pow(u32, 10, number_of_range_modifiers);
-                        range_modifier *= numeric_value * power;
+                        if (range_modifier) |*modifier| {
+                            modifier.* *= 10;
+                            modifier.* += numeric_value;
+                        } else {
+                            range_modifier = numeric_value;
+                        }
                         number_of_range_modifiers += 1;
                     },
                     'd' => {
@@ -59,26 +63,39 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                     .Delete => |*motion| {
                         switch (c) {
                             'd' => {
+                                const range = if (waiting_for_motion_data.range) |r| has: {
+                                    break :has r - 1;
+                                } else 0;
                                 motion.* = Motion{
-                                    .DownwardsLines = waiting_for_motion_data.range - 1,
+                                    .DownwardsLines = range,
                                 };
                             },
                             'e' => {
-                                motion.* = Motion{ .UntilEndOfWord = waiting_for_motion_data.range };
+                                motion.* = Motion{
+                                    .UntilEndOfWord = waiting_for_motion_data.range orelse 1,
+                                };
                             },
                             'w' => {
-                                motion.* = Motion{ .UntilNextWord = waiting_for_motion_data.range };
+                                motion.* = Motion{
+                                    .UntilNextWord = waiting_for_motion_data.range orelse 1,
+                                };
                             },
                             'j' => {
-                                motion.* = Motion{ .DownwardsLines = waiting_for_motion_data.range };
+                                motion.* = Motion{
+                                    .DownwardsLines = waiting_for_motion_data.range orelse 1,
+                                };
                             },
                             'k' => {
-                                motion.* = Motion{ .UpwardsLines = waiting_for_motion_data.range };
+                                motion.* = Motion{
+                                    .UpwardsLines = waiting_for_motion_data.range orelse 1,
+                                };
                             },
                             else => @panic("unimplemented motion"),
                         }
                         try verbs.append(waiting_for_motion_data.verb);
                         state = ParseState.WaitingForVerbOrRangeModifier;
+                        range_modifier = null;
+                        number_of_range_modifiers = 0;
                     },
                 }
             },
@@ -285,6 +302,66 @@ test "`5dd` creates 'delete 4 lines downwards'" {
             switch (motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 4);
+                },
+                else => unreachable,
+            }
+        },
+    }
+}
+
+test "`52dd` creates 'delete 51 lines downwards'" {
+    const input = "52dd"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 1);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
+    switch (first_verb) {
+        .Delete => |motion| {
+            testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
+            switch (motion) {
+                .DownwardsLines => |lines| {
+                    testing.expectEqual(lines, 51);
+                },
+                else => unreachable,
+            }
+        },
+    }
+}
+
+test "`52dj` creates 'delete 52 lines downwards'" {
+    const input = "52dj"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 1);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
+    switch (first_verb) {
+        .Delete => |motion| {
+            testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
+            switch (motion) {
+                .DownwardsLines => |lines| {
+                    testing.expectEqual(lines, 52);
+                },
+                else => unreachable,
+            }
+        },
+    }
+}
+
+test "`5232dj` creates 'delete 5232 lines downwards'" {
+    const input = "5232dj"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 1);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
+    switch (first_verb) {
+        .Delete => |motion| {
+            testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
+            switch (motion) {
+                .DownwardsLines => |lines| {
+                    testing.expectEqual(lines, 5232);
                 },
                 else => unreachable,
             }
