@@ -9,8 +9,8 @@ pub fn runTests() void {}
 pub const Motion = union(enum) {
     Unset,
     NoMotion,
-    UntilEndOfWord,
-    UntilNextWord,
+    UntilEndOfWord: u32,
+    UntilNextWord: u32,
     DownwardsLines: u32,
     UpwardsLines: u32,
 };
@@ -68,10 +68,10 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                                 };
                             },
                             'e' => {
-                                motion.* = Motion.UntilEndOfWord;
+                                motion.* = Motion{ .UntilEndOfWord = waiting_for_motion_data.range };
                             },
                             'w' => {
-                                motion.* = Motion.UntilNextWord;
+                                motion.* = Motion{ .UntilNextWord = waiting_for_motion_data.range };
                             },
                             'j' => {
                                 motion.* = Motion{ .DownwardsLines = waiting_for_motion_data.range };
@@ -111,7 +111,13 @@ test "`dd` creates a delete verb" {
     testing.expect(std.meta.activeTag(verb) == Verb.Delete);
     switch (verb) {
         .Delete => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.NoMotion);
+            testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
+            switch (motion) {
+                .DownwardsLines => |lines| {
+                    testing.expectEqual(lines, 0);
+                },
+                else => unreachable,
+            }
         },
     }
 }
@@ -125,7 +131,13 @@ test "`dddd` creates two delete verbs" {
         testing.expect(std.meta.activeTag(verb) == Verb.Delete);
         switch (verb) {
             .Delete => |motion| {
-                testing.expect(std.meta.activeTag(motion) == Motion.NoMotion);
+                testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
+                switch (motion) {
+                    .DownwardsLines => |lines| {
+                        testing.expectEqual(lines, 0);
+                    },
+                    else => unreachable,
+                }
             },
         }
     }
@@ -141,13 +153,25 @@ test "`ddde` creates two delete verbs, last one until end of word" {
     testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
     switch (first_verb) {
         .Delete => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.NoMotion);
+            testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
+            switch (motion) {
+                .DownwardsLines => |lines| {
+                    testing.expectEqual(lines, 0);
+                },
+                else => unreachable,
+            }
         },
     }
     testing.expect(std.meta.activeTag(second_verb) == Verb.Delete);
     switch (second_verb) {
         .Delete => |motion| {
             testing.expect(std.meta.activeTag(motion) == Motion.UntilEndOfWord);
+            switch (motion) {
+                .UntilEndOfWord => |words| {
+                    testing.expectEqual(words, 1);
+                },
+                else => unreachable,
+            }
         },
     }
 }
@@ -162,6 +186,12 @@ test "`dw` creates 'delete until next word'" {
     switch (first_verb) {
         .Delete => |motion| {
             testing.expect(std.meta.activeTag(motion) == Motion.UntilNextWord);
+            switch (motion) {
+                .UntilNextWord => |words| {
+                    testing.expectEqual(words, 1);
+                },
+                else => unreachable,
+            }
         },
     }
 }
