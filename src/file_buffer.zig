@@ -341,6 +341,20 @@ test "`remove` removes and shrinks when `shrink` option is `true`" {
     testing.expectEqualSlices(u8, file_buffer.lines()[1].sliceConst(), string3.sliceConst());
 }
 
+test "`remove` removes when type does not have `deinit()`" {
+    var file_buffer = try FileBuffer([]u8).init(direct_allocator, FileBufferOptions{});
+    var string1 = try mem.dupe(direct_allocator, u8, "hello"[0..]);
+    var string2 = try mem.dupe(direct_allocator, u8, "there"[0..]);
+    var string3 = try mem.dupe(direct_allocator, u8, "handsome"[0..]);
+    const lines_to_add = ([_][]u8{ string1, string2, string3 })[0..];
+    try file_buffer.append(direct_allocator, lines_to_add);
+    file_buffer.remove(1, 2, RemoveOptions{});
+    testing.expectEqual(file_buffer.capacity, 3);
+    testing.expectEqual(file_buffer.count, 2);
+    testing.expectEqualSlices(u8, file_buffer.lines()[0], string1);
+    testing.expectEqualSlices(u8, file_buffer.lines()[1], string3);
+}
+
 test "`removeCopy` removes and gives a new `FileBuffer`" {
     var file_buffer = try FileBuffer(String(u8)).init(direct_allocator, FileBufferOptions{});
     const string1 = try String(u8).copyConst(direct_allocator, "hello");
