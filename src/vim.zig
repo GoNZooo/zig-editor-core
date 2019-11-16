@@ -368,3 +368,36 @@ test "`5232dj` creates 'delete 5232 lines downwards'" {
         },
     }
 }
+
+test "`5232dj23dk` creates 'delete 5232 lines downwards' & 'delete 23 lines upwards'" {
+    const input = "5232dj23dk"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 2);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    const second_verb = verb_slice[1];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
+    testing.expect(std.meta.activeTag(second_verb) == Verb.Delete);
+    switch (first_verb) {
+        .Delete => |motion| {
+            testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
+            switch (motion) {
+                .DownwardsLines => |lines| {
+                    testing.expectEqual(lines, 5232);
+                },
+                else => unreachable,
+            }
+        },
+    }
+    switch (second_verb) {
+        .Delete => |motion| {
+            testing.expect(std.meta.activeTag(motion) == Motion.UpwardsLines);
+            switch (motion) {
+                .UpwardsLines => |lines| {
+                    testing.expectEqual(lines, 23);
+                },
+                else => unreachable,
+            }
+        },
+    }
+}
