@@ -11,6 +11,8 @@ pub const Motion = union(enum) {
     NoMotion,
     UntilEndOfWord,
     UntilNextWord,
+    DownwardsLines: u32,
+    UpwardsLines: u32,
 };
 
 pub const Verb = union(enum) {
@@ -52,6 +54,14 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                             'w' => {
                                 state = ParseState.WaitingForVerb;
                                 motion.* = Motion.UntilNextWord;
+                            },
+                            'j' => {
+                                state = ParseState.WaitingForVerb;
+                                motion.* = Motion{ .DownwardsLines = 1 };
+                            },
+                            'k' => {
+                                state = ParseState.WaitingForVerb;
+                                motion.* = Motion{ .UpwardsLines = 1 };
                             },
                             else => @panic("unimplemented motion"),
                         }
@@ -135,6 +145,46 @@ test "`dw` creates 'delete until next word'" {
     switch (first_verb) {
         .Delete => |motion| {
             testing.expect(std.meta.activeTag(motion) == Motion.UntilNextWord);
+        },
+    }
+}
+
+test "`dj` creates 'delete one line downwards'" {
+    const input = "dj"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 1);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
+    switch (first_verb) {
+        .Delete => |motion| {
+            testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
+            switch (motion) {
+                .DownwardsLines => |lines| {
+                    testing.expectEqual(lines, 1);
+                },
+                else => unreachable,
+            }
+        },
+    }
+}
+
+test "`dk` creates 'delete one line upwards'" {
+    const input = "dk"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 1);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
+    switch (first_verb) {
+        .Delete => |motion| {
+            testing.expect(std.meta.activeTag(motion) == Motion.UpwardsLines);
+            switch (motion) {
+                .UpwardsLines => |lines| {
+                    testing.expectEqual(lines, 1);
+                },
+                else => unreachable,
+            }
         },
     }
 }
