@@ -39,11 +39,8 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                 switch (c) {
                     '0'...'9' => {
                         const numeric_value = c - '0';
-                        range_modifier *= numeric_value * std.math.pow(
-                            u32,
-                            10,
-                            number_of_range_modifiers,
-                        );
+                        const power = std.math.pow(u32, 10, number_of_range_modifiers);
+                        range_modifier *= numeric_value * power;
                         number_of_range_modifiers += 1;
                     },
                     'd' => {
