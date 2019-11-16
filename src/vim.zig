@@ -4,8 +4,6 @@ const mem = std.mem;
 const direct_allocator = std.heap.direct_allocator;
 const ArrayList = std.ArrayList;
 
-pub fn runTests() void {}
-
 pub const Motion = union(enum) {
     Unset,
     UntilEndOfWord: u32,
@@ -401,3 +399,5 @@ test "`5232dj2301dk` creates 'delete 5232 lines downwards' & 'delete 2301 lines 
         },
     }
 }
+
+pub fn runTests() void {}
