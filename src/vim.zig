@@ -12,6 +12,8 @@ pub const Motion = union(enum) {
     UpwardsLines: u32,
     ForwardsIncluding: ?u8,
     BackwardsIncluding: ?u8,
+    ForwardsExcluding: ?u8,
+    BackwardsExcluding: ?u8,
 };
 
 pub const Verb = union(enum) {
@@ -41,7 +43,11 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                 switch (data.verb) {
                     .Delete, .Yank => |*motion| {
                         switch (motion.*) {
-                            .ForwardsIncluding, .BackwardsIncluding => |*target| {
+                            .ForwardsIncluding,
+                            .BackwardsIncluding,
+                            .ForwardsExcluding,
+                            .BackwardsExcluding,
+                            => |*target| {
                                 target.* = c;
                             },
                             else => unreachable,
@@ -123,6 +129,24 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                             },
                             'F' => {
                                 motion.* = Motion{ .BackwardsIncluding = null };
+                                state = ParseState{
+                                    .WaitingForTarget = VerbBuilderData{
+                                        .range = waiting_for_motion_data.range,
+                                        .verb = waiting_for_motion_data.verb,
+                                    },
+                                };
+                            },
+                            't' => {
+                                motion.* = Motion{ .ForwardsExcluding = null };
+                                state = ParseState{
+                                    .WaitingForTarget = VerbBuilderData{
+                                        .range = waiting_for_motion_data.range,
+                                        .verb = waiting_for_motion_data.verb,
+                                    },
+                                };
+                            },
+                            'T' => {
+                                motion.* = Motion{ .BackwardsExcluding = null };
                                 state = ParseState{
                                     .WaitingForTarget = VerbBuilderData{
                                         .range = waiting_for_motion_data.range,
@@ -560,4 +584,47 @@ test "`dF)` = 'delete back to and including )'" {
         else => unreachable,
     }
 }
+
+test "`dt)` = 'delete to but excluding )'" {
+    const input = "dt)"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 1);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
+    switch (first_verb) {
+        .Delete => |motion| {
+            testing.expect(std.meta.activeTag(motion) == Motion.ForwardsExcluding);
+            switch (motion) {
+                .ForwardsExcluding => |character| {
+                    testing.expectEqual(character, ')');
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`dT)` = 'delete back to but excluding )'" {
+    const input = "dT)"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 1);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
+    switch (first_verb) {
+        .Delete => |motion| {
+            testing.expect(std.meta.activeTag(motion) == Motion.BackwardsExcluding);
+            switch (motion) {
+                .BackwardsExcluding => |character| {
+                    testing.expectEqual(character, ')');
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
 pub fn runTests() void {}
