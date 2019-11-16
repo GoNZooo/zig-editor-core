@@ -8,7 +8,6 @@ pub fn runTests() void {}
 
 pub const Motion = union(enum) {
     Unset,
-    NoMotion,
     UntilEndOfWord: u32,
     UntilNextWord: u32,
     DownwardsLines: u32,
@@ -93,11 +92,11 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
 }
 
 test "can get active tag of verb" {
-    const verb = Verb{ .Delete = Motion.NoMotion };
+    const verb = Verb{ .Delete = Motion.Unset };
     testing.expect(std.meta.activeTag(verb) == Verb.Delete);
     switch (verb) {
         .Delete => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.NoMotion);
+            testing.expect(std.meta.activeTag(motion) == Motion.Unset);
         },
     }
 }
