@@ -92,6 +92,30 @@ pub fn FileBuffer(comptime T: type) type {
             };
         }
 
+        pub fn insert(self: *Self, start: usize, lines_to_insert: ConstLines) !void {
+            const capacity = self.getRequiredCapacity(lines_to_insert);
+            const lines_before_start = self.__lines[0..start];
+            const start_of_slice_after = start + lines_to_insert.len;
+            const end_of_slice_after = self.count + lines_to_insert.len;
+            const lines_after_inserted = self.__lines[start..self.count];
+            var allocated_lines = self.__lines;
+            if (capacity > self.capacity) {
+                allocated_lines = try self.allocator.realloc(self.__lines, capacity);
+            }
+
+            mem.copy(T, allocated_lines[0..start], lines_before_start);
+            mem.copy(
+                T,
+                allocated_lines[start_of_slice_after..end_of_slice_after],
+                lines_after_inserted,
+            );
+            mem.copy(T, allocated_lines[start..(start + lines_to_insert.len)], lines_to_insert);
+
+            self.__lines = allocated_lines;
+            self.capacity = capacity;
+            self.count += lines_to_insert.len;
+        }
+
         pub fn remove(self: *Self, start: usize, end: usize, options: RemoveOptions) void {
             assert(start <= end);
             assert(end <= self.count);
@@ -245,6 +269,32 @@ test "`appendCopy` appends lines and shrinks if given the option" {
     }
     testing.expectEqual(file_buffer.count, 0);
     testing.expectEqual(file_buffer.capacity, 120);
+}
+
+test "`insert` inserts lines" {
+    var file_buffer = try FileBuffer(String(u8)).init(direct_allocator, FileBufferOptions{});
+    testing.expectEqual(file_buffer.count, 0);
+
+    const string1 = try String(u8).copyConst(direct_allocator, "hello");
+    const string2 = try String(u8).copyConst(direct_allocator, "you");
+    const string3 = try String(u8).copyConst(direct_allocator, "!");
+    const lines_to_add = ([_]String(u8){ string1, string2, string3 })[0..];
+    try file_buffer.append(direct_allocator, lines_to_add);
+    const string4 = try String(u8).copyConst(direct_allocator, "there,");
+    const string5 = try String(u8).copyConst(direct_allocator, "you");
+    const string6 = try String(u8).copyConst(direct_allocator, "handsome");
+    const string7 = try String(u8).copyConst(direct_allocator, "devil");
+    const lines_to_insert = ([_]String(u8){ string4, string5, string6, string7 })[0..];
+    try file_buffer.insert(1, lines_to_insert);
+    testing.expectEqual(file_buffer.count, 7);
+    testing.expectEqual(file_buffer.capacity, 7);
+    testing.expectEqualSlices(u8, file_buffer.lines()[0].sliceConst(), "hello");
+    testing.expectEqualSlices(u8, file_buffer.lines()[1].sliceConst(), "there,");
+    testing.expectEqualSlices(u8, file_buffer.lines()[2].sliceConst(), "you");
+    testing.expectEqualSlices(u8, file_buffer.lines()[3].sliceConst(), "handsome");
+    testing.expectEqualSlices(u8, file_buffer.lines()[4].sliceConst(), "devil");
+    testing.expectEqualSlices(u8, file_buffer.lines()[5].sliceConst(), "you");
+    testing.expectEqualSlices(u8, file_buffer.lines()[6].sliceConst(), "!");
 }
 
 test "`remove` removes" {
