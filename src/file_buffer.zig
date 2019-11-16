@@ -129,6 +129,9 @@ pub fn FileBuffer(comptime T: type) type {
                 allocated_lines = self.allocator.shrink(self.__lines, count);
                 self.capacity = allocated_lines.len;
             }
+            for (self.__lines[start..end]) |*removed_line| {
+                if (@hasDecl(@typeOf(removed_line.*), "deinit")) removed_line.deinit();
+            }
 
             mem.copy(T, allocated_lines[0..start], lines_before_deletion);
             mem.copy(T, allocated_lines[start..count], lines_after_deletion);
