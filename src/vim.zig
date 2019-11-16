@@ -19,53 +19,68 @@ pub const Verb = union(enum) {
     Delete: Motion,
 };
 
+const WaitingForMotionData = struct {
+    range: u32,
+    verb: Verb,
+};
+
 const ParseState = union(enum) {
-    WaitingForVerb,
-    WaitingForMotion: Verb,
+    WaitingForVerbOrRangeModifier,
+    WaitingForMotion: WaitingForMotionData,
 };
 
 pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb) {
     var verbs = ArrayList(Verb).init(allocator);
-    var state: ParseState = ParseState.WaitingForVerb;
+    var state: ParseState = ParseState.WaitingForVerbOrRangeModifier;
+    var range_modifier: u32 = 1;
+    var number_of_range_modifiers: u32 = 0;
     for (input) |c| {
         switch (state) {
-            ParseState.WaitingForVerb => {
+            ParseState.WaitingForVerbOrRangeModifier => {
                 switch (c) {
+                    '0'...'9' => {
+                        const numeric_value = c - '0';
+                        range_modifier *= numeric_value * std.math.pow(
+                            u32,
+                            10,
+                            number_of_range_modifiers,
+                        );
+                        number_of_range_modifiers += 1;
+                    },
                     'd' => {
                         state = ParseState{
-                            .WaitingForMotion = Verb{ .Delete = Motion.Unset },
+                            .WaitingForMotion = WaitingForMotionData{
+                                .verb = Verb{ .Delete = Motion.Unset },
+                                .range = range_modifier,
+                            },
                         };
                     },
                     else => {},
                 }
             },
-            ParseState.WaitingForMotion => |*verb| {
-                switch (verb.*) {
+            ParseState.WaitingForMotion => |*waiting_for_motion_data| {
+                switch (waiting_for_motion_data.verb) {
                     .Delete => |*motion| {
                         switch (c) {
                             'd' => {
-                                state = ParseState.WaitingForVerb;
                                 motion.* = Motion.NoMotion;
                             },
                             'e' => {
-                                state = ParseState.WaitingForVerb;
                                 motion.* = Motion.UntilEndOfWord;
                             },
                             'w' => {
-                                state = ParseState.WaitingForVerb;
                                 motion.* = Motion.UntilNextWord;
                             },
                             'j' => {
-                                state = ParseState.WaitingForVerb;
-                                motion.* = Motion{ .DownwardsLines = 1 };
+                                motion.* = Motion{ .DownwardsLines = waiting_for_motion_data.range };
                             },
                             'k' => {
-                                state = ParseState.WaitingForVerb;
-                                motion.* = Motion{ .UpwardsLines = 1 };
+                                motion.* = Motion{ .UpwardsLines = waiting_for_motion_data.range };
                             },
                             else => @panic("unimplemented motion"),
                         }
-                        try verbs.append(verb.*);
+                        try verbs.append(waiting_for_motion_data.verb);
+                        state = ParseState.WaitingForVerbOrRangeModifier;
                     },
                 }
             },
@@ -182,6 +197,46 @@ test "`dk` creates 'delete one line upwards'" {
             switch (motion) {
                 .UpwardsLines => |lines| {
                     testing.expectEqual(lines, 1);
+                },
+                else => unreachable,
+            }
+        },
+    }
+}
+
+test "`5dj` creates 'delete 5 lines downwards'" {
+    const input = "5dj"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 1);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
+    switch (first_verb) {
+        .Delete => |motion| {
+            testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
+            switch (motion) {
+                .DownwardsLines => |lines| {
+                    testing.expectEqual(lines, 5);
+                },
+                else => unreachable,
+            }
+        },
+    }
+}
+
+test "`5dk` creates 'delete 5 lines upwards'" {
+    const input = "5dk"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 1);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
+    switch (first_verb) {
+        .Delete => |motion| {
+            testing.expect(std.meta.activeTag(motion) == Motion.UpwardsLines);
+            switch (motion) {
+                .UpwardsLines => |lines| {
+                    testing.expectEqual(lines, 5);
                 },
                 else => unreachable,
             }
