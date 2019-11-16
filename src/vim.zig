@@ -63,7 +63,9 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                     .Delete => |*motion| {
                         switch (c) {
                             'd' => {
-                                motion.* = Motion.NoMotion;
+                                motion.* = Motion{
+                                    .DownwardsLines = waiting_for_motion_data.range - 1,
+                                };
                             },
                             'e' => {
                                 motion.* = Motion.UntilEndOfWord;
@@ -237,6 +239,26 @@ test "`5dk` creates 'delete 5 lines upwards'" {
             switch (motion) {
                 .UpwardsLines => |lines| {
                     testing.expectEqual(lines, 5);
+                },
+                else => unreachable,
+            }
+        },
+    }
+}
+
+test "`5dd` creates 'delete 4 lines downwards'" {
+    const input = "5dd"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 1);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
+    switch (first_verb) {
+        .Delete => |motion| {
+            testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
+            switch (motion) {
+                .DownwardsLines => |lines| {
+                    testing.expectEqual(lines, 4);
                 },
                 else => unreachable,
             }
