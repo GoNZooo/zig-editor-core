@@ -14,6 +14,7 @@ pub const Motion = union(enum) {
 
 pub const Verb = union(enum) {
     Delete: Motion,
+    Yank: Motion,
 };
 
 const WaitingForMotionData = struct {
@@ -53,20 +54,26 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                             },
                         };
                     },
+                    'y' => {
+                        state = ParseState{
+                            .WaitingForMotion = WaitingForMotionData{
+                                .verb = Verb{ .Yank = Motion.Unset },
+                                .range = range_modifier,
+                            },
+                        };
+                    },
                     else => {},
                 }
             },
             ParseState.WaitingForMotion => |*waiting_for_motion_data| {
                 switch (waiting_for_motion_data.verb) {
-                    .Delete => |*motion| {
+                    .Delete, .Yank => |*motion| {
                         switch (c) {
-                            'd' => {
+                            'd', 'y' => {
                                 const range = if (waiting_for_motion_data.range) |r| has: {
                                     break :has r - 1;
                                 } else 0;
-                                motion.* = Motion{
-                                    .DownwardsLines = range,
-                                };
+                                motion.* = Motion{ .DownwardsLines = range };
                             },
                             'e' => {
                                 motion.* = Motion{
@@ -110,6 +117,7 @@ test "can get active tag of verb" {
         .Delete => |motion| {
             testing.expect(std.meta.activeTag(motion) == Motion.Unset);
         },
+        else => unreachable,
     }
 }
 
@@ -130,6 +138,7 @@ test "`dd` creates a delete verb" {
                 else => unreachable,
             }
         },
+        else => unreachable,
     }
 }
 
@@ -150,6 +159,7 @@ test "`dddd` creates two delete verbs" {
                     else => unreachable,
                 }
             },
+            else => unreachable,
         }
     }
 }
@@ -172,6 +182,7 @@ test "`ddde` creates two delete verbs, last one until end of word" {
                 else => unreachable,
             }
         },
+        else => unreachable,
     }
     testing.expect(std.meta.activeTag(second_verb) == Verb.Delete);
     switch (second_verb) {
@@ -184,6 +195,7 @@ test "`ddde` creates two delete verbs, last one until end of word" {
                 else => unreachable,
             }
         },
+        else => unreachable,
     }
 }
 
@@ -204,6 +216,7 @@ test "`dw` creates 'delete until next word'" {
                 else => unreachable,
             }
         },
+        else => unreachable,
     }
 }
 
@@ -224,6 +237,7 @@ test "`dj` creates 'delete one line downwards'" {
                 else => unreachable,
             }
         },
+        else => unreachable,
     }
 }
 
@@ -244,6 +258,7 @@ test "`dk` creates 'delete one line upwards'" {
                 else => unreachable,
             }
         },
+        else => unreachable,
     }
 }
 
@@ -264,6 +279,7 @@ test "`5dj` creates 'delete 5 lines downwards'" {
                 else => unreachable,
             }
         },
+        else => unreachable,
     }
 }
 
@@ -284,6 +300,7 @@ test "`5dk` creates 'delete 5 lines upwards'" {
                 else => unreachable,
             }
         },
+        else => unreachable,
     }
 }
 
@@ -304,6 +321,7 @@ test "`5dd` creates 'delete 4 lines downwards'" {
                 else => unreachable,
             }
         },
+        else => unreachable,
     }
 }
 
@@ -324,6 +342,7 @@ test "`52dd` creates 'delete 51 lines downwards'" {
                 else => unreachable,
             }
         },
+        else => unreachable,
     }
 }
 
@@ -344,6 +363,7 @@ test "`52dj` creates 'delete 52 lines downwards'" {
                 else => unreachable,
             }
         },
+        else => unreachable,
     }
 }
 
@@ -364,6 +384,7 @@ test "`5232dj` creates 'delete 5232 lines downwards'" {
                 else => unreachable,
             }
         },
+        else => unreachable,
     }
 }
 
@@ -386,6 +407,7 @@ test "`5232dj2301dk` creates 'delete 5232 lines downwards' & 'delete 2301 lines 
                 else => unreachable,
             }
         },
+        else => unreachable,
     }
     switch (second_verb) {
         .Delete => |motion| {
@@ -397,6 +419,63 @@ test "`5232dj2301dk` creates 'delete 5232 lines downwards' & 'delete 2301 lines 
                 else => unreachable,
             }
         },
+        else => unreachable,
+    }
+}
+
+test "`5232yy` creates 'yank 5231 lines downwards'" {
+    const input = "5232yy"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 1);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.Yank);
+    switch (first_verb) {
+        .Yank => |motion| {
+            testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
+            switch (motion) {
+                .DownwardsLines => |lines| {
+                    testing.expectEqual(lines, 5231);
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`5232yj2301yk` creates 'yank 5232 lines downwards' & 'yank 2301 lines upwards'" {
+    const input = "5232yj2301yk"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 2);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    const second_verb = verb_slice[1];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.Yank);
+    testing.expect(std.meta.activeTag(second_verb) == Verb.Yank);
+    switch (first_verb) {
+        .Yank => |motion| {
+            testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
+            switch (motion) {
+                .DownwardsLines => |lines| {
+                    testing.expectEqual(lines, 5232);
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+    switch (second_verb) {
+        .Yank => |motion| {
+            testing.expect(std.meta.activeTag(motion) == Motion.UpwardsLines);
+            switch (motion) {
+                .UpwardsLines => |lines| {
+                    testing.expectEqual(lines, 2301);
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
     }
 }
 
