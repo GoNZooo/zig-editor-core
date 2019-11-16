@@ -44,10 +44,8 @@ pub fn FileBuffer(comptime T: type) type {
         }
 
         pub fn deinit(self: *Self) void {
-            for (self.__lines) |*l| {
-                if (@hasDecl(@typeOf(l.*), "deinit")) {
-                    l.deinit();
-                }
+            for (self.__lines[0..self.count]) |*l| {
+                if (@hasDecl(@typeOf(l.*), "deinit")) l.deinit();
             }
             self.allocator.free(self.__lines);
             self.count = 0;
