@@ -10,6 +10,8 @@ pub const Motion = union(enum) {
     UntilNextWord: u32,
     DownwardsLines: u32,
     UpwardsLines: u32,
+    ForwardsIncluding: ?u8,
+    BackwardsIncluding: ?u8,
 };
 
 pub const Verb = union(enum) {
@@ -17,14 +19,15 @@ pub const Verb = union(enum) {
     Yank: Motion,
 };
 
-const WaitingForMotionData = struct {
+const VerbBuilderData = struct {
     range: ?u32,
     verb: Verb,
 };
 
 const ParseState = union(enum) {
     WaitingForVerbOrRangeModifier,
-    WaitingForMotion: WaitingForMotionData,
+    WaitingForMotion: VerbBuilderData,
+    WaitingForTarget: VerbBuilderData,
 };
 
 pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb) {
@@ -34,6 +37,23 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
     var number_of_range_modifiers: u32 = 0;
     for (input) |c| {
         switch (state) {
+            ParseState.WaitingForTarget => |*data| {
+                switch (data.verb) {
+                    .Delete, .Yank => |*motion| {
+                        switch (motion.*) {
+                            .ForwardsIncluding => |*target| {
+                                target.* = c;
+                            },
+                            .BackwardsIncluding => |*target| {
+                                target.* = c;
+                            },
+                            else => unreachable,
+                        }
+                    },
+                }
+                try verbs.append(data.verb);
+                state = ParseState.WaitingForVerbOrRangeModifier;
+            },
             ParseState.WaitingForVerbOrRangeModifier => {
                 switch (c) {
                     '0'...'9' => {
@@ -48,7 +68,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                     },
                     'd' => {
                         state = ParseState{
-                            .WaitingForMotion = WaitingForMotionData{
+                            .WaitingForMotion = VerbBuilderData{
                                 .verb = Verb{ .Delete = Motion.Unset },
                                 .range = range_modifier,
                             },
@@ -56,7 +76,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                     },
                     'y' => {
                         state = ParseState{
-                            .WaitingForMotion = WaitingForMotionData{
+                            .WaitingForMotion = VerbBuilderData{
                                 .verb = Verb{ .Yank = Motion.Unset },
                                 .range = range_modifier,
                             },
@@ -95,12 +115,41 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                                     .UpwardsLines = waiting_for_motion_data.range orelse 1,
                                 };
                             },
+                            'f' => {
+                                motion.* = Motion{ .ForwardsIncluding = null };
+                                const range = waiting_for_motion_data.range;
+                                const verb = waiting_for_motion_data.verb;
+                                const new_state = ParseState{
+                                    .WaitingForTarget = VerbBuilderData{
+                                        .range = range,
+                                        .verb = verb,
+                                    },
+                                };
+                                state = new_state;
+                            },
+                            'F' => {
+                                motion.* = Motion{ .BackwardsIncluding = null };
+                                const range = waiting_for_motion_data.range;
+                                const verb = waiting_for_motion_data.verb;
+                                const new_state = ParseState{
+                                    .WaitingForTarget = VerbBuilderData{
+                                        .range = range,
+                                        .verb = verb,
+                                    },
+                                };
+                                state = new_state;
+                            },
                             else => @panic("unimplemented motion"),
                         }
-                        try verbs.append(waiting_for_motion_data.verb);
-                        state = ParseState.WaitingForVerbOrRangeModifier;
-                        range_modifier = null;
-                        number_of_range_modifiers = 0;
+                        switch (state) {
+                            .WaitingForTarget => {},
+                            else => {
+                                try verbs.append(waiting_for_motion_data.verb);
+                                state = ParseState.WaitingForVerbOrRangeModifier;
+                                range_modifier = null;
+                                number_of_range_modifiers = 0;
+                            },
+                        }
                     },
                 }
             },
@@ -142,7 +191,7 @@ test "`dd` creates a delete verb" {
     }
 }
 
-test "`dddd` creates two delete verbs" {
+test "`dddd` = two delete verbs" {
     const input = "dddd"[0..];
     const verbs = try parseInput(direct_allocator, input);
     testing.expectEqual(verbs.count(), 2);
@@ -164,7 +213,7 @@ test "`dddd` creates two delete verbs" {
     }
 }
 
-test "`ddde` creates two delete verbs, last one until end of word" {
+test "`ddde` = two delete verbs, last one until end of word" {
     const input = "ddde"[0..];
     const verbs = try parseInput(direct_allocator, input);
     testing.expectEqual(verbs.count(), 2);
@@ -199,7 +248,7 @@ test "`ddde` creates two delete verbs, last one until end of word" {
     }
 }
 
-test "`dw` creates 'delete until next word'" {
+test "`dw` = 'delete until next word'" {
     const input = "dw"[0..];
     const verbs = try parseInput(direct_allocator, input);
     testing.expectEqual(verbs.count(), 1);
@@ -220,7 +269,7 @@ test "`dw` creates 'delete until next word'" {
     }
 }
 
-test "`dj` creates 'delete one line downwards'" {
+test "`dj` = 'delete one line downwards'" {
     const input = "dj"[0..];
     const verbs = try parseInput(direct_allocator, input);
     testing.expectEqual(verbs.count(), 1);
@@ -241,7 +290,7 @@ test "`dj` creates 'delete one line downwards'" {
     }
 }
 
-test "`dk` creates 'delete one line upwards'" {
+test "`dk` = 'delete one line upwards'" {
     const input = "dk"[0..];
     const verbs = try parseInput(direct_allocator, input);
     testing.expectEqual(verbs.count(), 1);
@@ -262,7 +311,7 @@ test "`dk` creates 'delete one line upwards'" {
     }
 }
 
-test "`5dj` creates 'delete 5 lines downwards'" {
+test "`5dj` = 'delete 5 lines downwards'" {
     const input = "5dj"[0..];
     const verbs = try parseInput(direct_allocator, input);
     testing.expectEqual(verbs.count(), 1);
@@ -283,7 +332,7 @@ test "`5dj` creates 'delete 5 lines downwards'" {
     }
 }
 
-test "`5dk` creates 'delete 5 lines upwards'" {
+test "`5dk` = 'delete 5 lines upwards'" {
     const input = "5dk"[0..];
     const verbs = try parseInput(direct_allocator, input);
     testing.expectEqual(verbs.count(), 1);
@@ -304,7 +353,7 @@ test "`5dk` creates 'delete 5 lines upwards'" {
     }
 }
 
-test "`5dd` creates 'delete 4 lines downwards'" {
+test "`5dd` = 'delete 4 lines downwards'" {
     const input = "5dd"[0..];
     const verbs = try parseInput(direct_allocator, input);
     testing.expectEqual(verbs.count(), 1);
@@ -325,7 +374,7 @@ test "`5dd` creates 'delete 4 lines downwards'" {
     }
 }
 
-test "`52dd` creates 'delete 51 lines downwards'" {
+test "`52dd` = 'delete 51 lines downwards'" {
     const input = "52dd"[0..];
     const verbs = try parseInput(direct_allocator, input);
     testing.expectEqual(verbs.count(), 1);
@@ -346,7 +395,7 @@ test "`52dd` creates 'delete 51 lines downwards'" {
     }
 }
 
-test "`52dj` creates 'delete 52 lines downwards'" {
+test "`52dj` = 'delete 52 lines downwards'" {
     const input = "52dj"[0..];
     const verbs = try parseInput(direct_allocator, input);
     testing.expectEqual(verbs.count(), 1);
@@ -367,7 +416,7 @@ test "`52dj` creates 'delete 52 lines downwards'" {
     }
 }
 
-test "`5232dj` creates 'delete 5232 lines downwards'" {
+test "`5232dj` = 'delete 5232 lines downwards'" {
     const input = "5232dj"[0..];
     const verbs = try parseInput(direct_allocator, input);
     testing.expectEqual(verbs.count(), 1);
@@ -388,7 +437,7 @@ test "`5232dj` creates 'delete 5232 lines downwards'" {
     }
 }
 
-test "`5232dj2301dk` creates 'delete 5232 lines downwards' & 'delete 2301 lines upwards'" {
+test "`5232dj2301dk` = 'delete 5232 lines downwards' & 'delete 2301 lines upwards'" {
     const input = "5232dj2301dk"[0..];
     const verbs = try parseInput(direct_allocator, input);
     testing.expectEqual(verbs.count(), 2);
@@ -423,7 +472,7 @@ test "`5232dj2301dk` creates 'delete 5232 lines downwards' & 'delete 2301 lines 
     }
 }
 
-test "`5232yy` creates 'yank 5231 lines downwards'" {
+test "`5232yy` = 'yank 5231 lines downwards'" {
     const input = "5232yy"[0..];
     const verbs = try parseInput(direct_allocator, input);
     testing.expectEqual(verbs.count(), 1);
@@ -444,8 +493,8 @@ test "`5232yy` creates 'yank 5231 lines downwards'" {
     }
 }
 
-test "`5232yj2301yk` creates 'yank 5232 lines downwards' & 'yank 2301 lines upwards'" {
-    const input = "5232yj2301yk"[0..];
+test "`522yj201yk` = 'yank 522 lines downwards' & 'yank 231 lines upwards'" {
+    const input = "522yj201yk"[0..];
     const verbs = try parseInput(direct_allocator, input);
     testing.expectEqual(verbs.count(), 2);
     const verb_slice = verbs.toSliceConst();
@@ -458,7 +507,7 @@ test "`5232yj2301yk` creates 'yank 5232 lines downwards' & 'yank 2301 lines upwa
             testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
             switch (motion) {
                 .DownwardsLines => |lines| {
-                    testing.expectEqual(lines, 5232);
+                    testing.expectEqual(lines, 522);
                 },
                 else => unreachable,
             }
@@ -470,7 +519,7 @@ test "`5232yj2301yk` creates 'yank 5232 lines downwards' & 'yank 2301 lines upwa
             testing.expect(std.meta.activeTag(motion) == Motion.UpwardsLines);
             switch (motion) {
                 .UpwardsLines => |lines| {
-                    testing.expectEqual(lines, 2301);
+                    testing.expectEqual(lines, 201);
                 },
                 else => unreachable,
             }
@@ -479,4 +528,45 @@ test "`5232yj2301yk` creates 'yank 5232 lines downwards' & 'yank 2301 lines upwa
     }
 }
 
+test "`df)` = 'delete to and including )'" {
+    const input = "df)"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 1);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
+    switch (first_verb) {
+        .Delete => |motion| {
+            testing.expect(std.meta.activeTag(motion) == Motion.ForwardsIncluding);
+            switch (motion) {
+                .ForwardsIncluding => |character| {
+                    testing.expectEqual(character, ')');
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`dF)` = 'delete back to and including )'" {
+    const input = "dF)"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 1);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
+    switch (first_verb) {
+        .Delete => |motion| {
+            testing.expect(std.meta.activeTag(motion) == Motion.BackwardsIncluding);
+            switch (motion) {
+                .BackwardsIncluding => |character| {
+                    testing.expectEqual(character, ')');
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
 pub fn runTests() void {}
