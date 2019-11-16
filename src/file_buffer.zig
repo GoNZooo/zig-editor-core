@@ -23,6 +23,7 @@ pub fn FileBuffer(comptime T: type) type {
         const Self = @This();
         const Lines = []T;
         const ConstLines = []const T;
+        const hasDeinit = @typeInfo(T) == .Struct and @hasDecl(T, "deinit");
 
         count: usize,
         capacity: usize,
@@ -43,10 +44,11 @@ pub fn FileBuffer(comptime T: type) type {
             };
         }
 
+        /// Deinitializes the `FileBuffer`, deinitializing all lines inside of it in the process.
+        /// If the line stored in the `FileBuffer` has a `deinit()` method, it will be run
+        /// automatically.
         pub fn deinit(self: *Self) void {
-            for (self.__lines[0..self.count]) |*l| {
-                if (@hasDecl(@typeOf(l.*), "deinit")) l.deinit();
-            }
+            if (hasDeinit) (for (self.__lines[0..self.count]) |*l| l.deinit());
             self.allocator.free(self.__lines);
             self.count = 0;
             self.capacity = 0;
@@ -186,6 +188,19 @@ test "`deinit` frees the memory in the `FileBuffer`" {
     const file_buffer_line_1_content = file_buffer_lines[0].__chars;
     testing.expectEqual(file_buffer.count, 2);
     testing.expectEqual(file_buffer.capacity, 2);
+    file_buffer.deinit();
+}
+
+test "`deinit` frees the memory in the `FileBuffer` without `deinit()` present" {
+    var file_buffer = try FileBuffer([]u8).init(direct_allocator, FileBufferOptions{});
+    var string1 = try mem.dupe(direct_allocator, u8, "hello"[0..]);
+    var string2 = try mem.dupe(direct_allocator, u8, "there"[0..]);
+    var string3 = try mem.dupe(direct_allocator, u8, "handsome"[0..]);
+    const lines_to_add = ([_][]u8{ string1, string2, string3 })[0..];
+    try file_buffer.append(direct_allocator, lines_to_add);
+    const file_buffer_lines = file_buffer.lines();
+    testing.expectEqual(file_buffer.count, 3);
+    testing.expectEqual(file_buffer.capacity, 3);
     file_buffer.deinit();
 }
 
