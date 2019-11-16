@@ -41,10 +41,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                 switch (data.verb) {
                     .Delete, .Yank => |*motion| {
                         switch (motion.*) {
-                            .ForwardsIncluding => |*target| {
-                                target.* = c;
-                            },
-                            .BackwardsIncluding => |*target| {
+                            .ForwardsIncluding, .BackwardsIncluding => |*target| {
                                 target.* = c;
                             },
                             else => unreachable,
@@ -117,27 +114,21 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                             },
                             'f' => {
                                 motion.* = Motion{ .ForwardsIncluding = null };
-                                const range = waiting_for_motion_data.range;
-                                const verb = waiting_for_motion_data.verb;
-                                const new_state = ParseState{
+                                state = ParseState{
                                     .WaitingForTarget = VerbBuilderData{
-                                        .range = range,
-                                        .verb = verb,
+                                        .range = waiting_for_motion_data.range,
+                                        .verb = waiting_for_motion_data.verb,
                                     },
                                 };
-                                state = new_state;
                             },
                             'F' => {
                                 motion.* = Motion{ .BackwardsIncluding = null };
-                                const range = waiting_for_motion_data.range;
-                                const verb = waiting_for_motion_data.verb;
-                                const new_state = ParseState{
+                                state = ParseState{
                                     .WaitingForTarget = VerbBuilderData{
-                                        .range = range,
-                                        .verb = verb,
+                                        .range = waiting_for_motion_data.range,
+                                        .verb = waiting_for_motion_data.verb,
                                     },
                                 };
-                                state = new_state;
                             },
                             else => @panic("unimplemented motion"),
                         }
