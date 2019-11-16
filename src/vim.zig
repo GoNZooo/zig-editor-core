@@ -37,7 +37,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
         switch (state) {
             ParseState.WaitingForVerbOrRangeModifier => {
                 switch (c) {
-                    '1'...'9' => {
+                    '0'...'9' => {
                         const numeric_value = c - '0';
                         if (range_modifier) |*modifier| {
                             modifier.* *= 10;
@@ -369,8 +369,8 @@ test "`5232dj` creates 'delete 5232 lines downwards'" {
     }
 }
 
-test "`5232dj23dk` creates 'delete 5232 lines downwards' & 'delete 23 lines upwards'" {
-    const input = "5232dj23dk"[0..];
+test "`5232dj2301dk` creates 'delete 5232 lines downwards' & 'delete 2301 lines upwards'" {
+    const input = "5232dj2301dk"[0..];
     const verbs = try parseInput(direct_allocator, input);
     testing.expectEqual(verbs.count(), 2);
     const verb_slice = verbs.toSliceConst();
@@ -394,7 +394,7 @@ test "`5232dj23dk` creates 'delete 5232 lines downwards' & 'delete 23 lines upwa
             testing.expect(std.meta.activeTag(motion) == Motion.UpwardsLines);
             switch (motion) {
                 .UpwardsLines => |lines| {
-                    testing.expectEqual(lines, 23);
+                    testing.expectEqual(lines, 2301);
                 },
                 else => unreachable,
             }
