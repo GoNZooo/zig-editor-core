@@ -47,10 +47,16 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                             .BackwardsIncluding,
                             .ForwardsExcluding,
                             .BackwardsExcluding,
-                            => |*target| {
-                                target.* = c;
-                            },
-                            else => unreachable,
+                            => |*target| target.* = c,
+                            .Unset,
+                            .UntilEndOfWord,
+                            .UntilNextWord,
+                            .DownwardsLines,
+                            .UpwardsLines,
+                            => std.debug.panic(
+                                "non-target motion waiting for target: {}\n",
+                                motion.*,
+                            ),
                         }
                     },
                 }
