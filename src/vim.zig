@@ -91,7 +91,10 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                             },
                         };
                     },
-                    else => {},
+                    else => std.debug.panic(
+                        "Not expecting character '{}', waiting for verb or range modifier",
+                        c,
+                    ),
                 }
             },
             ParseState.WaitingForMotion => |*waiting_for_motion_data| {
@@ -160,7 +163,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                                     },
                                 };
                             },
-                            else => @panic("unimplemented motion"),
+                            else => std.debug.panic("unimplemented motion: {}\n", c),
                         }
                         switch (state) {
                             .WaitingForTarget => {},
