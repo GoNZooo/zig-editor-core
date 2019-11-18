@@ -35,7 +35,7 @@ const VerbBuilderData = struct {
 };
 
 const ParseState = union(enum) {
-    WaitingForRegisterOrVerbOrRangeModifier: VerbBuilderData,
+    Start: VerbBuilderData,
     WaitingForMotion: VerbBuilderData,
     WaitingForTarget: VerbBuilderData,
     WaitingForRegisterCharacter: VerbBuilderData,
@@ -44,7 +44,7 @@ const ParseState = union(enum) {
 pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb) {
     var verbs = ArrayList(Verb).init(allocator);
     var state: ParseState = ParseState{
-        .WaitingForRegisterOrVerbOrRangeModifier = VerbBuilderData{
+        .Start = VerbBuilderData{
             .range = null,
             .register = null,
             .verb = .Unset,
@@ -54,43 +54,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
 
     for (input) |c| {
         switch (state) {
-            ParseState.WaitingForRegisterCharacter => |*verb_data| {
-                switch (c) {
-                    'a'...'z', 'A'...'Z', '+', '*' => {
-                        verb_data.register = c;
-                        state = ParseState{ .WaitingForRegisterOrVerbOrRangeModifier = verb_data.* };
-                    },
-                    else => std.debug.panic("unknown register: {}\n", c),
-                }
-            },
-
-            ParseState.WaitingForTarget => |*data| {
-                switch (data.verb) {
-                    .Delete, .Yank => |*verb_data| {
-                        switch (verb_data.motion) {
-                            .ForwardsIncluding,
-                            .BackwardsIncluding,
-                            .ForwardsExcluding,
-                            .BackwardsExcluding,
-                            => |*target| target.* = c,
-                            .Unset,
-                            .UntilEndOfWord,
-                            .UntilNextWord,
-                            .DownwardsLines,
-                            .UpwardsLines,
-                            => std.debug.panic(
-                                "non-target motion waiting for target: {}\n",
-                                verb_data.motion,
-                            ),
-                        }
-                    },
-                    .Unset => std.debug.panic("no verb set when waiting for target"),
-                }
-                try verbs.append(data.verb);
-                state = ParseState{ .WaitingForRegisterOrVerbOrRangeModifier = VerbBuilderData{} };
-            },
-
-            ParseState.WaitingForRegisterOrVerbOrRangeModifier => |*data| {
+            ParseState.Start => |*data| {
                 switch (c) {
                     '"' => {
                         state = ParseState{ .WaitingForRegisterCharacter = data.* };
@@ -138,6 +102,42 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                         c,
                     ),
                 }
+            },
+
+            ParseState.WaitingForRegisterCharacter => |*verb_data| {
+                switch (c) {
+                    'a'...'z', 'A'...'Z', '+', '*' => {
+                        verb_data.register = c;
+                        state = ParseState{ .Start = verb_data.* };
+                    },
+                    else => std.debug.panic("unknown register: {}\n", c),
+                }
+            },
+
+            ParseState.WaitingForTarget => |*data| {
+                switch (data.verb) {
+                    .Delete, .Yank => |*verb_data| {
+                        switch (verb_data.motion) {
+                            .ForwardsIncluding,
+                            .BackwardsIncluding,
+                            .ForwardsExcluding,
+                            .BackwardsExcluding,
+                            => |*target| target.* = c,
+                            .Unset,
+                            .UntilEndOfWord,
+                            .UntilNextWord,
+                            .DownwardsLines,
+                            .UpwardsLines,
+                            => std.debug.panic(
+                                "non-target motion waiting for target: {}\n",
+                                verb_data.motion,
+                            ),
+                        }
+                    },
+                    .Unset => std.debug.panic("no verb set when waiting for target"),
+                }
+                try verbs.append(data.verb);
+                state = ParseState{ .Start = VerbBuilderData{} };
             },
 
             ParseState.WaitingForMotion => |*waiting_for_motion_data| {
@@ -218,7 +218,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                             else => {
                                 try verbs.append(waiting_for_motion_data.verb);
                                 state = ParseState{
-                                    .WaitingForRegisterOrVerbOrRangeModifier = VerbBuilderData{},
+                                    .Start = VerbBuilderData{},
                                 };
                             },
                         }
