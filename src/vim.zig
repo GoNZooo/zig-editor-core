@@ -27,6 +27,7 @@ const VerbBuilderData = struct {
 };
 
 const ParseState = union(enum) {
+    // @TODO: add register support (`"<register character>`)
     WaitingForVerbOrRangeModifier,
     WaitingForMotion: VerbBuilderData,
     WaitingForTarget: VerbBuilderData,
