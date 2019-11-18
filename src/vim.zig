@@ -29,6 +29,7 @@ pub const Verb = union(enum) {
 
 const VerbBuilderData = struct {
     range: ?u32 = null,
+    range_modifiers: u32 = 0,
     register: ?u8 = null,
     verb: Verb = Verb.Unset,
 };
@@ -47,10 +48,10 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
             .range = null,
             .register = null,
             .verb = .Unset,
+            .range_modifiers = 0,
         },
     };
-    var range_modifier: ?u32 = null;
-    var number_of_range_modifiers: u32 = 0;
+
     for (input) |c| {
         switch (state) {
             ParseState.WaitingForRegisterCharacter => |*verb_data| {
@@ -94,13 +95,13 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                     },
                     '0'...'9' => {
                         const numeric_value = c - '0';
-                        if (range_modifier) |*modifier| {
-                            modifier.* *= 10;
-                            modifier.* += numeric_value;
+                        if (data.range) |*range| {
+                            range.* *= 10;
+                            range.* += numeric_value;
                         } else {
-                            range_modifier = numeric_value;
+                            data.range = numeric_value;
                         }
-                        number_of_range_modifiers += 1;
+                        data.range_modifiers += 1;
                     },
                     'd' => {
                         state = ParseState{
@@ -112,7 +113,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                                     },
                                 },
                                 .register = data.register,
-                                .range = range_modifier,
+                                .range = data.range,
                             },
                         };
                     },
@@ -126,7 +127,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                                     },
                                 },
                                 .register = data.register,
-                                .range = range_modifier,
+                                .range = data.range,
                             },
                         };
                     },
@@ -215,8 +216,6 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                                 state = ParseState{
                                     .WaitingForRegisterOrVerbOrRangeModifier = VerbBuilderData{},
                                 };
-                                range_modifier = null;
-                                number_of_range_modifiers = 0;
                             },
                         }
                     },
