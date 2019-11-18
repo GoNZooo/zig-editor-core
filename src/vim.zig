@@ -130,65 +130,12 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                                 const range = if (builder_data.range) |r| (r - 1) else 0;
                                 verb_data.motion = Motion{ .DownwardsLines = range };
                             },
-                            'e' => {
-                                verb_data.motion = Motion{
-                                    .UntilEndOfWord = builder_data.range orelse 1,
-                                };
+                            'e', 'w', 'j', 'k' => {
+                                verb_data.motion = motionFromKey(c, builder_data.*);
                             },
-                            'w' => {
-                                verb_data.motion = Motion{
-                                    .UntilNextWord = builder_data.range orelse 1,
-                                };
-                            },
-                            'j' => {
-                                verb_data.motion = Motion{
-                                    .DownwardsLines = builder_data.range orelse 1,
-                                };
-                            },
-                            'k' => {
-                                verb_data.motion = Motion{
-                                    .UpwardsLines = builder_data.range orelse 1,
-                                };
-                            },
-                            'f' => {
-                                verb_data.motion = Motion{ .ForwardsIncluding = null };
-                                state = ParseState{
-                                    .WaitingForTarget = VerbBuilderData{
-                                        .range = builder_data.range,
-                                        .verb = builder_data.verb,
-                                        .register = builder_data.register,
-                                    },
-                                };
-                            },
-                            'F' => {
-                                verb_data.motion = Motion{ .BackwardsIncluding = null };
-                                state = ParseState{
-                                    .WaitingForTarget = VerbBuilderData{
-                                        .range = builder_data.range,
-                                        .verb = builder_data.verb,
-                                        .register = builder_data.register,
-                                    },
-                                };
-                            },
-                            't' => {
-                                verb_data.motion = Motion{ .ForwardsExcluding = null };
-                                state = ParseState{
-                                    .WaitingForTarget = VerbBuilderData{
-                                        .range = builder_data.range,
-                                        .verb = builder_data.verb,
-                                        .register = builder_data.register,
-                                    },
-                                };
-                            },
-                            'T' => {
-                                verb_data.motion = Motion{ .BackwardsExcluding = null };
-                                state = ParseState{
-                                    .WaitingForTarget = VerbBuilderData{
-                                        .range = builder_data.range,
-                                        .verb = builder_data.verb,
-                                        .register = builder_data.register,
-                                    },
-                                };
+                            'f', 'F', 't', 'T' => {
+                                verb_data.motion = motionFromKey(c, builder_data.*);
+                                state = ParseState{ .WaitingForTarget = builder_data.* };
                             },
                             else => std.debug.panic("unimplemented motion: {}\n", c),
                         }
@@ -217,6 +164,20 @@ fn verbFromKey(character: u8, register: ?u8) Verb {
         'd' => Verb{ .Delete = VerbData{ .motion = Motion.Unset, .register = register } },
         'y' => Verb{ .Yank = VerbData{ .motion = Motion.Unset, .register = register } },
         else => std.debug.panic("unsupported verb key: {}\n", character),
+    };
+}
+
+fn motionFromKey(character: u8, builder_data: VerbBuilderData) Motion {
+    return switch (character) {
+        'e' => Motion{ .UntilEndOfWord = builder_data.range orelse 1 },
+        'w' => Motion{ .UntilNextWord = builder_data.range orelse 1 },
+        'j' => Motion{ .DownwardsLines = builder_data.range orelse 1 },
+        'k' => Motion{ .UpwardsLines = builder_data.range orelse 1 },
+        'f' => Motion{ .ForwardsIncluding = null },
+        'F' => Motion{ .BackwardsIncluding = null },
+        't' => Motion{ .ForwardsExcluding = null },
+        'T' => Motion{ .BackwardsExcluding = null },
+        else => std.debug.panic("unsupported motion: {}\n", character),
     };
 }
 
