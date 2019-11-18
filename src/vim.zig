@@ -63,6 +63,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                     else => std.debug.panic("unknown register: {}\n", c),
                 }
             },
+
             ParseState.WaitingForTarget => |*data| {
                 switch (data.verb) {
                     .Delete, .Yank => |*verb_data| {
@@ -88,6 +89,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                 try verbs.append(data.verb);
                 state = ParseState{ .WaitingForRegisterOrVerbOrRangeModifier = VerbBuilderData{} };
             },
+
             ParseState.WaitingForRegisterOrVerbOrRangeModifier => |*data| {
                 switch (c) {
                     '"' => {
@@ -137,6 +139,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                     ),
                 }
             },
+
             ParseState.WaitingForMotion => |*waiting_for_motion_data| {
                 switch (waiting_for_motion_data.verb) {
                     .Delete, .Yank => |*verb_data| {
@@ -209,6 +212,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                             },
                             else => std.debug.panic("unimplemented motion: {}\n", c),
                         }
+
                         switch (state) {
                             .WaitingForTarget => {},
                             else => {
