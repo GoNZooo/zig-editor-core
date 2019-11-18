@@ -54,46 +54,28 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
 
     for (input) |c| {
         switch (state) {
-            ParseState.Start => |*data| {
+            ParseState.Start => |*builder_data| {
                 switch (c) {
                     '"' => {
-                        state = ParseState{ .WaitingForRegisterCharacter = data.* };
+                        state = ParseState{ .WaitingForRegisterCharacter = builder_data.* };
                     },
                     '0'...'9' => {
                         const numeric_value = c - '0';
-                        if (data.range) |*range| {
+                        if (builder_data.range) |*range| {
                             range.* *= 10;
                             range.* += numeric_value;
                         } else {
-                            data.range = numeric_value;
+                            builder_data.range = numeric_value;
                         }
-                        data.range_modifiers += 1;
+                        builder_data.range_modifiers += 1;
                     },
-                    'd' => {
+                    'd', 'y' => {
+                        const verb = verbFromKey(c, builder_data.register);
                         state = ParseState{
                             .WaitingForMotion = VerbBuilderData{
-                                .verb = Verb{
-                                    .Delete = VerbData{
-                                        .motion = Motion.Unset,
-                                        .register = data.register,
-                                    },
-                                },
-                                .register = data.register,
-                                .range = data.range,
-                            },
-                        };
-                    },
-                    'y' => {
-                        state = ParseState{
-                            .WaitingForMotion = VerbBuilderData{
-                                .verb = Verb{
-                                    .Yank = VerbData{
-                                        .motion = Motion.Unset,
-                                        .register = data.register,
-                                    },
-                                },
-                                .register = data.register,
-                                .range = data.range,
+                                .verb = verb,
+                                .register = builder_data.register,
+                                .range = builder_data.range,
                             },
                         };
                     },
@@ -104,18 +86,18 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                 }
             },
 
-            ParseState.WaitingForRegisterCharacter => |*verb_data| {
+            ParseState.WaitingForRegisterCharacter => |*builder_data| {
                 switch (c) {
                     'a'...'z', 'A'...'Z', '+', '*' => {
-                        verb_data.register = c;
-                        state = ParseState{ .Start = verb_data.* };
+                        builder_data.register = c;
+                        state = ParseState{ .Start = builder_data.* };
                     },
                     else => std.debug.panic("unknown register: {}\n", c),
                 }
             },
 
-            ParseState.WaitingForTarget => |*data| {
-                switch (data.verb) {
+            ParseState.WaitingForTarget => |*builder_data| {
+                switch (builder_data.verb) {
                     .Delete, .Yank => |*verb_data| {
                         switch (verb_data.motion) {
                             .ForwardsIncluding,
@@ -136,47 +118,45 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                     },
                     .Unset => std.debug.panic("no verb set when waiting for target"),
                 }
-                try verbs.append(data.verb);
+                try verbs.append(builder_data.verb);
                 state = ParseState{ .Start = VerbBuilderData{} };
             },
 
-            ParseState.WaitingForMotion => |*waiting_for_motion_data| {
-                switch (waiting_for_motion_data.verb) {
+            ParseState.WaitingForMotion => |*builder_data| {
+                switch (builder_data.verb) {
                     .Delete, .Yank => |*verb_data| {
                         switch (c) {
                             'd', 'y' => {
-                                const range = if (waiting_for_motion_data.range) |r| has: {
-                                    break :has r - 1;
-                                } else 0;
+                                const range = if (builder_data.range) |r| (r - 1) else 0;
                                 verb_data.motion = Motion{ .DownwardsLines = range };
                             },
                             'e' => {
                                 verb_data.motion = Motion{
-                                    .UntilEndOfWord = waiting_for_motion_data.range orelse 1,
+                                    .UntilEndOfWord = builder_data.range orelse 1,
                                 };
                             },
                             'w' => {
                                 verb_data.motion = Motion{
-                                    .UntilNextWord = waiting_for_motion_data.range orelse 1,
+                                    .UntilNextWord = builder_data.range orelse 1,
                                 };
                             },
                             'j' => {
                                 verb_data.motion = Motion{
-                                    .DownwardsLines = waiting_for_motion_data.range orelse 1,
+                                    .DownwardsLines = builder_data.range orelse 1,
                                 };
                             },
                             'k' => {
                                 verb_data.motion = Motion{
-                                    .UpwardsLines = waiting_for_motion_data.range orelse 1,
+                                    .UpwardsLines = builder_data.range orelse 1,
                                 };
                             },
                             'f' => {
                                 verb_data.motion = Motion{ .ForwardsIncluding = null };
                                 state = ParseState{
                                     .WaitingForTarget = VerbBuilderData{
-                                        .range = waiting_for_motion_data.range,
-                                        .verb = waiting_for_motion_data.verb,
-                                        .register = waiting_for_motion_data.register,
+                                        .range = builder_data.range,
+                                        .verb = builder_data.verb,
+                                        .register = builder_data.register,
                                     },
                                 };
                             },
@@ -184,9 +164,9 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                                 verb_data.motion = Motion{ .BackwardsIncluding = null };
                                 state = ParseState{
                                     .WaitingForTarget = VerbBuilderData{
-                                        .range = waiting_for_motion_data.range,
-                                        .verb = waiting_for_motion_data.verb,
-                                        .register = waiting_for_motion_data.register,
+                                        .range = builder_data.range,
+                                        .verb = builder_data.verb,
+                                        .register = builder_data.register,
                                     },
                                 };
                             },
@@ -194,9 +174,9 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                                 verb_data.motion = Motion{ .ForwardsExcluding = null };
                                 state = ParseState{
                                     .WaitingForTarget = VerbBuilderData{
-                                        .range = waiting_for_motion_data.range,
-                                        .verb = waiting_for_motion_data.verb,
-                                        .register = waiting_for_motion_data.register,
+                                        .range = builder_data.range,
+                                        .verb = builder_data.verb,
+                                        .register = builder_data.register,
                                     },
                                 };
                             },
@@ -204,9 +184,9 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                                 verb_data.motion = Motion{ .BackwardsExcluding = null };
                                 state = ParseState{
                                     .WaitingForTarget = VerbBuilderData{
-                                        .range = waiting_for_motion_data.range,
-                                        .verb = waiting_for_motion_data.verb,
-                                        .register = waiting_for_motion_data.register,
+                                        .range = builder_data.range,
+                                        .verb = builder_data.verb,
+                                        .register = builder_data.register,
                                     },
                                 };
                             },
@@ -216,7 +196,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                         switch (state) {
                             .WaitingForTarget => {},
                             else => {
-                                try verbs.append(waiting_for_motion_data.verb);
+                                try verbs.append(builder_data.verb);
                                 state = ParseState{
                                     .Start = VerbBuilderData{},
                                 };
@@ -230,6 +210,14 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
     }
 
     return verbs;
+}
+
+fn verbFromKey(character: u8, register: ?u8) Verb {
+    return switch (character) {
+        'd' => Verb{ .Delete = VerbData{ .motion = Motion.Unset, .register = register } },
+        'y' => Verb{ .Yank = VerbData{ .motion = Motion.Unset, .register = register } },
+        else => std.debug.panic("unsupported verb key: {}\n", character),
+    };
 }
 
 test "can get active tag of verb" {
