@@ -4,6 +4,11 @@ const mem = std.mem;
 const direct_allocator = std.heap.direct_allocator;
 const ArrayList = std.ArrayList;
 
+pub const VerbData = struct {
+    motion: Motion,
+    register: ?u8,
+};
+
 pub const Motion = union(enum) {
     Unset,
     UntilEndOfWord: u32,
@@ -17,33 +22,50 @@ pub const Motion = union(enum) {
 };
 
 pub const Verb = union(enum) {
-    Delete: Motion,
-    Yank: Motion,
+    Unset,
+    Delete: VerbData,
+    Yank: VerbData,
 };
 
 const VerbBuilderData = struct {
-    range: ?u32,
-    verb: Verb,
+    range: ?u32 = null,
+    register: ?u8 = null,
+    verb: Verb = Verb.Unset,
 };
 
 const ParseState = union(enum) {
-    // @TODO: add register support (`"<register character>`)
-    WaitingForVerbOrRangeModifier,
+    WaitingForRegisterOrVerbOrRangeModifier: VerbBuilderData,
     WaitingForMotion: VerbBuilderData,
     WaitingForTarget: VerbBuilderData,
+    WaitingForRegisterCharacter: VerbBuilderData,
 };
 
 pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb) {
     var verbs = ArrayList(Verb).init(allocator);
-    var state: ParseState = ParseState.WaitingForVerbOrRangeModifier;
+    var state: ParseState = ParseState{
+        .WaitingForRegisterOrVerbOrRangeModifier = VerbBuilderData{
+            .range = null,
+            .register = null,
+            .verb = .Unset,
+        },
+    };
     var range_modifier: ?u32 = null;
     var number_of_range_modifiers: u32 = 0;
     for (input) |c| {
         switch (state) {
+            ParseState.WaitingForRegisterCharacter => |*verb_data| {
+                switch (c) {
+                    'a'...'z', 'A'...'Z', '+', '*' => {
+                        verb_data.register = c;
+                        state = ParseState{ .WaitingForRegisterOrVerbOrRangeModifier = verb_data.* };
+                    },
+                    else => std.debug.panic("unknown register: {}\n", c),
+                }
+            },
             ParseState.WaitingForTarget => |*data| {
                 switch (data.verb) {
-                    .Delete, .Yank => |*motion| {
-                        switch (motion.*) {
+                    .Delete, .Yank => |*verb_data| {
+                        switch (verb_data.motion) {
                             .ForwardsIncluding,
                             .BackwardsIncluding,
                             .ForwardsExcluding,
@@ -56,16 +78,20 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                             .UpwardsLines,
                             => std.debug.panic(
                                 "non-target motion waiting for target: {}\n",
-                                motion.*,
+                                verb_data.motion,
                             ),
                         }
                     },
+                    .Unset => std.debug.panic("no verb set when waiting for target"),
                 }
                 try verbs.append(data.verb);
-                state = ParseState.WaitingForVerbOrRangeModifier;
+                state = ParseState{ .WaitingForRegisterOrVerbOrRangeModifier = VerbBuilderData{} };
             },
-            ParseState.WaitingForVerbOrRangeModifier => {
+            ParseState.WaitingForRegisterOrVerbOrRangeModifier => |*data| {
                 switch (c) {
+                    '"' => {
+                        state = ParseState{ .WaitingForRegisterCharacter = data.* };
+                    },
                     '0'...'9' => {
                         const numeric_value = c - '0';
                         if (range_modifier) |*modifier| {
@@ -79,7 +105,13 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                     'd' => {
                         state = ParseState{
                             .WaitingForMotion = VerbBuilderData{
-                                .verb = Verb{ .Delete = Motion.Unset },
+                                .verb = Verb{
+                                    .Delete = VerbData{
+                                        .motion = Motion.Unset,
+                                        .register = data.register,
+                                    },
+                                },
+                                .register = data.register,
                                 .range = range_modifier,
                             },
                         };
@@ -87,7 +119,13 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                     'y' => {
                         state = ParseState{
                             .WaitingForMotion = VerbBuilderData{
-                                .verb = Verb{ .Yank = Motion.Unset },
+                                .verb = Verb{
+                                    .Yank = VerbData{
+                                        .motion = Motion.Unset,
+                                        .register = data.register,
+                                    },
+                                },
+                                .register = data.register,
                                 .range = range_modifier,
                             },
                         };
@@ -100,67 +138,71 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
             },
             ParseState.WaitingForMotion => |*waiting_for_motion_data| {
                 switch (waiting_for_motion_data.verb) {
-                    .Delete, .Yank => |*motion| {
+                    .Delete, .Yank => |*verb_data| {
                         switch (c) {
                             'd', 'y' => {
                                 const range = if (waiting_for_motion_data.range) |r| has: {
                                     break :has r - 1;
                                 } else 0;
-                                motion.* = Motion{ .DownwardsLines = range };
+                                verb_data.motion = Motion{ .DownwardsLines = range };
                             },
                             'e' => {
-                                motion.* = Motion{
+                                verb_data.motion = Motion{
                                     .UntilEndOfWord = waiting_for_motion_data.range orelse 1,
                                 };
                             },
                             'w' => {
-                                motion.* = Motion{
+                                verb_data.motion = Motion{
                                     .UntilNextWord = waiting_for_motion_data.range orelse 1,
                                 };
                             },
                             'j' => {
-                                motion.* = Motion{
+                                verb_data.motion = Motion{
                                     .DownwardsLines = waiting_for_motion_data.range orelse 1,
                                 };
                             },
                             'k' => {
-                                motion.* = Motion{
+                                verb_data.motion = Motion{
                                     .UpwardsLines = waiting_for_motion_data.range orelse 1,
                                 };
                             },
                             'f' => {
-                                motion.* = Motion{ .ForwardsIncluding = null };
+                                verb_data.motion = Motion{ .ForwardsIncluding = null };
                                 state = ParseState{
                                     .WaitingForTarget = VerbBuilderData{
                                         .range = waiting_for_motion_data.range,
                                         .verb = waiting_for_motion_data.verb,
+                                        .register = waiting_for_motion_data.register,
                                     },
                                 };
                             },
                             'F' => {
-                                motion.* = Motion{ .BackwardsIncluding = null };
+                                verb_data.motion = Motion{ .BackwardsIncluding = null };
                                 state = ParseState{
                                     .WaitingForTarget = VerbBuilderData{
                                         .range = waiting_for_motion_data.range,
                                         .verb = waiting_for_motion_data.verb,
+                                        .register = waiting_for_motion_data.register,
                                     },
                                 };
                             },
                             't' => {
-                                motion.* = Motion{ .ForwardsExcluding = null };
+                                verb_data.motion = Motion{ .ForwardsExcluding = null };
                                 state = ParseState{
                                     .WaitingForTarget = VerbBuilderData{
                                         .range = waiting_for_motion_data.range,
                                         .verb = waiting_for_motion_data.verb,
+                                        .register = waiting_for_motion_data.register,
                                     },
                                 };
                             },
                             'T' => {
-                                motion.* = Motion{ .BackwardsExcluding = null };
+                                verb_data.motion = Motion{ .BackwardsExcluding = null };
                                 state = ParseState{
                                     .WaitingForTarget = VerbBuilderData{
                                         .range = waiting_for_motion_data.range,
                                         .verb = waiting_for_motion_data.verb,
+                                        .register = waiting_for_motion_data.register,
                                     },
                                 };
                             },
@@ -170,12 +212,15 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                             .WaitingForTarget => {},
                             else => {
                                 try verbs.append(waiting_for_motion_data.verb);
-                                state = ParseState.WaitingForVerbOrRangeModifier;
+                                state = ParseState{
+                                    .WaitingForRegisterOrVerbOrRangeModifier = VerbBuilderData{},
+                                };
                                 range_modifier = null;
                                 number_of_range_modifiers = 0;
                             },
                         }
                     },
+                    .Unset => std.debug.panic("no verb when waiting for motion"),
                 }
             },
         }
@@ -185,11 +230,11 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
 }
 
 test "can get active tag of verb" {
-    const verb = Verb{ .Delete = Motion.Unset };
+    const verb = Verb{ .Delete = VerbData{ .motion = Motion.Unset, .register = null } };
     testing.expect(std.meta.activeTag(verb) == Verb.Delete);
     switch (verb) {
-        .Delete => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.Unset);
+        .Delete => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.Unset);
         },
         else => unreachable,
     }
@@ -203,9 +248,9 @@ test "`dd` creates a delete verb" {
     const verb = verb_slice[0];
     testing.expect(std.meta.activeTag(verb) == Verb.Delete);
     switch (verb) {
-        .Delete => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
-            switch (motion) {
+        .Delete => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
+            switch (verb_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 0);
                 },
@@ -224,9 +269,9 @@ test "`dddd` = two delete verbs" {
     for (verb_slice) |verb| {
         testing.expect(std.meta.activeTag(verb) == Verb.Delete);
         switch (verb) {
-            .Delete => |motion| {
-                testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
-                switch (motion) {
+            .Delete => |verb_data| {
+                testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
+                switch (verb_data.motion) {
                     .DownwardsLines => |lines| {
                         testing.expectEqual(lines, 0);
                     },
@@ -247,9 +292,9 @@ test "`ddde` = two delete verbs, last one until end of word" {
     const second_verb = verb_slice[1];
     testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
     switch (first_verb) {
-        .Delete => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
-            switch (motion) {
+        .Delete => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
+            switch (verb_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 0);
                 },
@@ -260,9 +305,9 @@ test "`ddde` = two delete verbs, last one until end of word" {
     }
     testing.expect(std.meta.activeTag(second_verb) == Verb.Delete);
     switch (second_verb) {
-        .Delete => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.UntilEndOfWord);
-            switch (motion) {
+        .Delete => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.UntilEndOfWord);
+            switch (verb_data.motion) {
                 .UntilEndOfWord => |words| {
                     testing.expectEqual(words, 1);
                 },
@@ -281,9 +326,9 @@ test "`dw` = 'delete until next word'" {
     const first_verb = verb_slice[0];
     testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
     switch (first_verb) {
-        .Delete => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.UntilNextWord);
-            switch (motion) {
+        .Delete => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.UntilNextWord);
+            switch (verb_data.motion) {
                 .UntilNextWord => |words| {
                     testing.expectEqual(words, 1);
                 },
@@ -302,9 +347,9 @@ test "`dj` = 'delete one line downwards'" {
     const first_verb = verb_slice[0];
     testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
     switch (first_verb) {
-        .Delete => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
-            switch (motion) {
+        .Delete => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
+            switch (verb_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 1);
                 },
@@ -323,9 +368,9 @@ test "`dk` = 'delete one line upwards'" {
     const first_verb = verb_slice[0];
     testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
     switch (first_verb) {
-        .Delete => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.UpwardsLines);
-            switch (motion) {
+        .Delete => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.UpwardsLines);
+            switch (verb_data.motion) {
                 .UpwardsLines => |lines| {
                     testing.expectEqual(lines, 1);
                 },
@@ -344,9 +389,9 @@ test "`5dj` = 'delete 5 lines downwards'" {
     const first_verb = verb_slice[0];
     testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
     switch (first_verb) {
-        .Delete => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
-            switch (motion) {
+        .Delete => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
+            switch (verb_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 5);
                 },
@@ -365,9 +410,9 @@ test "`5dk` = 'delete 5 lines upwards'" {
     const first_verb = verb_slice[0];
     testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
     switch (first_verb) {
-        .Delete => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.UpwardsLines);
-            switch (motion) {
+        .Delete => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.UpwardsLines);
+            switch (verb_data.motion) {
                 .UpwardsLines => |lines| {
                     testing.expectEqual(lines, 5);
                 },
@@ -386,9 +431,9 @@ test "`5dd` = 'delete 4 lines downwards'" {
     const first_verb = verb_slice[0];
     testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
     switch (first_verb) {
-        .Delete => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
-            switch (motion) {
+        .Delete => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
+            switch (verb_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 4);
                 },
@@ -407,9 +452,9 @@ test "`52dd` = 'delete 51 lines downwards'" {
     const first_verb = verb_slice[0];
     testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
     switch (first_verb) {
-        .Delete => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
-            switch (motion) {
+        .Delete => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
+            switch (verb_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 51);
                 },
@@ -428,9 +473,9 @@ test "`52dj` = 'delete 52 lines downwards'" {
     const first_verb = verb_slice[0];
     testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
     switch (first_verb) {
-        .Delete => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
-            switch (motion) {
+        .Delete => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
+            switch (verb_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 52);
                 },
@@ -449,9 +494,9 @@ test "`5232dj` = 'delete 5232 lines downwards'" {
     const first_verb = verb_slice[0];
     testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
     switch (first_verb) {
-        .Delete => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
-            switch (motion) {
+        .Delete => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
+            switch (verb_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 5232);
                 },
@@ -472,9 +517,9 @@ test "`5232dj2301dk` = 'delete 5232 lines downwards' & 'delete 2301 lines upward
     testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
     testing.expect(std.meta.activeTag(second_verb) == Verb.Delete);
     switch (first_verb) {
-        .Delete => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
-            switch (motion) {
+        .Delete => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
+            switch (verb_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 5232);
                 },
@@ -484,9 +529,9 @@ test "`5232dj2301dk` = 'delete 5232 lines downwards' & 'delete 2301 lines upward
         else => unreachable,
     }
     switch (second_verb) {
-        .Delete => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.UpwardsLines);
-            switch (motion) {
+        .Delete => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.UpwardsLines);
+            switch (verb_data.motion) {
                 .UpwardsLines => |lines| {
                     testing.expectEqual(lines, 2301);
                 },
@@ -505,9 +550,9 @@ test "`5232yy` = 'yank 5231 lines downwards'" {
     const first_verb = verb_slice[0];
     testing.expect(std.meta.activeTag(first_verb) == Verb.Yank);
     switch (first_verb) {
-        .Yank => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
-            switch (motion) {
+        .Yank => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
+            switch (verb_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 5231);
                 },
@@ -528,9 +573,9 @@ test "`522yj201yk` = 'yank 522 lines downwards' & 'yank 231 lines upwards'" {
     testing.expect(std.meta.activeTag(first_verb) == Verb.Yank);
     testing.expect(std.meta.activeTag(second_verb) == Verb.Yank);
     switch (first_verb) {
-        .Yank => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.DownwardsLines);
-            switch (motion) {
+        .Yank => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
+            switch (verb_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 522);
                 },
@@ -540,9 +585,9 @@ test "`522yj201yk` = 'yank 522 lines downwards' & 'yank 231 lines upwards'" {
         else => unreachable,
     }
     switch (second_verb) {
-        .Yank => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.UpwardsLines);
-            switch (motion) {
+        .Yank => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.UpwardsLines);
+            switch (verb_data.motion) {
                 .UpwardsLines => |lines| {
                     testing.expectEqual(lines, 201);
                 },
@@ -561,9 +606,9 @@ test "`df)` = 'delete to and including )'" {
     const first_verb = verb_slice[0];
     testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
     switch (first_verb) {
-        .Delete => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.ForwardsIncluding);
-            switch (motion) {
+        .Delete => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.ForwardsIncluding);
+            switch (verb_data.motion) {
                 .ForwardsIncluding => |character| {
                     testing.expectEqual(character, ')');
                 },
@@ -582,9 +627,9 @@ test "`dF)` = 'delete back to and including )'" {
     const first_verb = verb_slice[0];
     testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
     switch (first_verb) {
-        .Delete => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.BackwardsIncluding);
-            switch (motion) {
+        .Delete => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.BackwardsIncluding);
+            switch (verb_data.motion) {
                 .BackwardsIncluding => |character| {
                     testing.expectEqual(character, ')');
                 },
@@ -603,9 +648,9 @@ test "`dt)` = 'delete to but excluding )'" {
     const first_verb = verb_slice[0];
     testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
     switch (first_verb) {
-        .Delete => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.ForwardsExcluding);
-            switch (motion) {
+        .Delete => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.ForwardsExcluding);
+            switch (verb_data.motion) {
                 .ForwardsExcluding => |character| {
                     testing.expectEqual(character, ')');
                 },
@@ -624,11 +669,55 @@ test "`dT)` = 'delete back to but excluding )'" {
     const first_verb = verb_slice[0];
     testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
     switch (first_verb) {
-        .Delete => |motion| {
-            testing.expect(std.meta.activeTag(motion) == Motion.BackwardsExcluding);
-            switch (motion) {
+        .Delete => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.BackwardsExcluding);
+            switch (verb_data.motion) {
                 .BackwardsExcluding => |character| {
                     testing.expectEqual(character, ')');
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`\"add` = 'delete current line into register a'" {
+    const input = "\"add"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 1);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
+    switch (first_verb) {
+        .Delete => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
+            testing.expectEqual(verb_data.register, 'a');
+            switch (verb_data.motion) {
+                .DownwardsLines => |lines| {
+                    testing.expectEqual(lines, 0);
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`\"+5dj` = 'delete 5 lines down into register +'" {
+    const input = "\"+5dj"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 1);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
+    switch (first_verb) {
+        .Delete => |verb_data| {
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
+            testing.expectEqual(verb_data.register, '+');
+            switch (verb_data.motion) {
+                .DownwardsLines => |lines| {
+                    testing.expectEqual(lines, 5);
                 },
                 else => unreachable,
             }
