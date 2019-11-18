@@ -126,11 +126,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                 switch (builder_data.verb) {
                     .Delete, .Yank => |*verb_data| {
                         switch (c) {
-                            'd', 'y' => {
-                                const range = if (builder_data.range) |r| (r - 1) else 0;
-                                verb_data.motion = Motion{ .DownwardsLines = range };
-                            },
-                            'e', 'w', 'j', 'k' => {
+                            'd', 'y', 'e', 'w', 'j', 'k' => {
                                 verb_data.motion = motionFromKey(c, builder_data.*);
                             },
                             'f', 'F', 't', 'T' => {
@@ -169,6 +165,7 @@ fn verbFromKey(character: u8, register: ?u8) Verb {
 
 fn motionFromKey(character: u8, builder_data: VerbBuilderData) Motion {
     return switch (character) {
+        'd', 'y' => Motion{ .DownwardsLines = if (builder_data.range) |r| (r - 1) else 0 },
         'e' => Motion{ .UntilEndOfWord = builder_data.range orelse 1 },
         'w' => Motion{ .UntilNextWord = builder_data.range orelse 1 },
         'j' => Motion{ .DownwardsLines = builder_data.range orelse 1 },
