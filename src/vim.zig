@@ -9,6 +9,11 @@ pub const VerbData = struct {
     register: ?u8,
 };
 
+pub const PasteData = struct {
+    register: ?u8,
+    range: ?u32,
+};
+
 pub const Motion = union(enum) {
     Unset,
     UntilEndOfWord: u32,
@@ -25,6 +30,8 @@ pub const Verb = union(enum) {
     Unset,
     Delete: VerbData,
     Yank: VerbData,
+    PasteForwards: PasteData,
+    PasteBackwards: PasteData,
 };
 
 const VerbBuilderData = struct {
@@ -70,7 +77,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                         builder_data.range_modifiers += 1;
                     },
                     'd', 'y' => {
-                        const verb = verbFromKey(c, builder_data.register);
+                        const verb = verbFromKey(c, builder_data.register, builder_data.range);
                         state = ParseState{
                             .WaitingForMotion = VerbBuilderData{
                                 .verb = verb,
@@ -78,6 +85,11 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                                 .range = builder_data.range,
                             },
                         };
+                    },
+                    'p', 'P' => {
+                        const verb = verbFromKey(c, builder_data.register, builder_data.range);
+                        try verbs.append(verb);
+                        state = ParseState{ .Start = VerbBuilderData{} };
                     },
                     else => std.debug.panic(
                         "Not expecting character '{}', waiting for verb or range modifier",
@@ -116,6 +128,10 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                             ),
                         }
                     },
+                    .PasteForwards, .PasteBackwards => std.debug.panic(
+                        "invalid verb for `WaitingForTarget`: {}\n",
+                        builder_data.verb,
+                    ),
                     .Unset => std.debug.panic("no verb set when waiting for target"),
                 }
                 try verbs.append(builder_data.verb);
@@ -146,6 +162,10 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                             },
                         }
                     },
+                    .PasteForwards, .PasteBackwards => std.debug.panic(
+                        "invalid verb for `WaitingForMotion`: {}\n",
+                        builder_data.verb,
+                    ),
                     .Unset => std.debug.panic("no verb when waiting for motion"),
                 }
             },
@@ -155,10 +175,22 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
     return verbs;
 }
 
-fn verbFromKey(character: u8, register: ?u8) Verb {
+fn verbFromKey(character: u8, register: ?u8, range: ?u32) Verb {
     return switch (character) {
         'd' => Verb{ .Delete = VerbData{ .motion = Motion.Unset, .register = register } },
         'y' => Verb{ .Yank = VerbData{ .motion = Motion.Unset, .register = register } },
+        'p' => Verb{
+            .PasteForwards = PasteData{
+                .range = range orelse 1,
+                .register = register,
+            },
+        },
+        'P' => Verb{
+            .PasteBackwards = PasteData{
+                .range = range orelse 1,
+                .register = register,
+            },
+        },
         else => std.debug.panic("unsupported verb key: {}\n", character),
     };
 }
@@ -670,6 +702,38 @@ test "`\"+5dj` = 'delete 5 lines down into register +'" {
                 },
                 else => unreachable,
             }
+        },
+        else => unreachable,
+    }
+}
+
+test "`p` = 'paste forwards'" {
+    const input = "p"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 1);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.PasteForwards);
+    switch (first_verb) {
+        .PasteForwards => |paste_data| {
+            testing.expectEqual(paste_data.range, 1);
+            testing.expectEqual(paste_data.register, null);
+        },
+        else => unreachable,
+    }
+}
+
+test "`\"a3P` = 'paste backwards 3 times from register a'" {
+    const input = "\"a3P"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 1);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.PasteBackwards);
+    switch (first_verb) {
+        .PasteBackwards => |paste_data| {
+            testing.expectEqual(paste_data.range, 3);
+            testing.expectEqual(paste_data.register, 'a');
         },
         else => unreachable,
     }
