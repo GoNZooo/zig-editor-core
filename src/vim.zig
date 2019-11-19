@@ -18,7 +18,7 @@ pub const Motion = union(enum) {
     Unset,
     UntilEndOfWord: u32,
     UntilNextWord: u32,
-    UntilEndOfLine: ?u32,
+    UntilEndOfLine: u32,
     DownwardsLines: u32,
     UpwardsLines: u32,
     ForwardsIncluding: ?u8,
@@ -208,7 +208,7 @@ fn motionFromKey(character: u8, builder_data: VerbBuilderData) Motion {
         'w' => Motion{ .UntilNextWord = builder_data.range orelse 1 },
         'j' => Motion{ .DownwardsLines = builder_data.range orelse 1 },
         'k' => Motion{ .UpwardsLines = builder_data.range orelse 1 },
-        '$' => Motion{ .UntilEndOfLine = builder_data.range },
+        '$' => Motion{ .UntilEndOfLine = builder_data.range orelse 1 },
         'f' => Motion{ .ForwardsIncluding = null },
         'F' => Motion{ .BackwardsIncluding = null },
         't' => Motion{ .ForwardsExcluding = null },
@@ -759,7 +759,7 @@ test "`d$` = 'delete until end of line'" {
             testing.expect(std.meta.activeTag(verb_data.motion) == Motion.UntilEndOfLine);
             switch (verb_data.motion) {
                 .UntilEndOfLine => |optional_lines| {
-                    testing.expectEqual(optional_lines, null);
+                    testing.expectEqual(optional_lines, 1);
                 },
                 else => unreachable,
             }
