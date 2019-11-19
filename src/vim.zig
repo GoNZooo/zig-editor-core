@@ -18,6 +18,7 @@ pub const Motion = union(enum) {
     Unset,
     UntilEndOfWord: u32,
     UntilNextWord: u32,
+    UntilEndOfLine: ?u32,
     DownwardsLines: u32,
     UpwardsLines: u32,
     ForwardsIncluding: ?u8,
@@ -122,6 +123,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                             .UntilNextWord,
                             .DownwardsLines,
                             .UpwardsLines,
+                            .UntilEndOfLine,
                             => std.debug.panic(
                                 "non-target motion waiting for target: {}\n",
                                 verb_data.motion,
@@ -142,7 +144,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                 switch (builder_data.verb) {
                     .Delete, .Yank => |*verb_data| {
                         switch (c) {
-                            'd', 'y', 'e', 'w', 'j', 'k' => {
+                            'd', 'y', 'e', 'w', 'j', 'k', '$' => {
                                 verb_data.motion = motionFromKey(c, builder_data.*);
                             },
                             'f', 'F', 't', 'T' => {
@@ -202,6 +204,7 @@ fn motionFromKey(character: u8, builder_data: VerbBuilderData) Motion {
         'w' => Motion{ .UntilNextWord = builder_data.range orelse 1 },
         'j' => Motion{ .DownwardsLines = builder_data.range orelse 1 },
         'k' => Motion{ .UpwardsLines = builder_data.range orelse 1 },
+        '$' => Motion{ .UntilEndOfLine = builder_data.range },
         'f' => Motion{ .ForwardsIncluding = null },
         'F' => Motion{ .BackwardsIncluding = null },
         't' => Motion{ .ForwardsExcluding = null },
@@ -734,6 +737,28 @@ test "`\"a3P` = 'paste backwards 3 times from register a'" {
         .PasteBackwards => |paste_data| {
             testing.expectEqual(paste_data.range, 3);
             testing.expectEqual(paste_data.register, 'a');
+        },
+        else => unreachable,
+    }
+}
+
+test "`d$` = 'delete until end of line'" {
+    const input = "d$"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 1);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
+    switch (first_verb) {
+        .Delete => |verb_data| {
+            testing.expectEqual(verb_data.register, null);
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.UntilEndOfLine);
+            switch (verb_data.motion) {
+                .UntilEndOfLine => |optional_lines| {
+                    testing.expectEqual(optional_lines, null);
+                },
+                else => unreachable,
+            }
         },
         else => unreachable,
     }
