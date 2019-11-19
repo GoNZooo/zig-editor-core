@@ -32,6 +32,7 @@ pub const Verb = union(enum) {
     Unset,
     Delete: VerbData,
     Yank: VerbData,
+    Change: VerbData,
     PasteForwards: PasteData,
     PasteBackwards: PasteData,
 };
@@ -78,7 +79,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                         }
                         builder_data.range_modifiers += 1;
                     },
-                    'd', 'y' => {
+                    'd', 'y', 'c' => {
                         const verb = verbFromKey(c, builder_data.register, builder_data.range);
                         state = ParseState{
                             .WaitingForMotion = VerbBuilderData{
@@ -116,7 +117,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
 
             ParseState.WaitingForTarget => |*builder_data| {
                 switch (builder_data.verb) {
-                    .Delete, .Yank => |*verb_data| {
+                    .Delete, .Yank, .Change => |*verb_data| {
                         switch (verb_data.motion) {
                             .ForwardsIncluding,
                             .BackwardsIncluding,
@@ -148,9 +149,9 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
 
             ParseState.WaitingForMotion => |*builder_data| {
                 switch (builder_data.verb) {
-                    .Delete, .Yank => |*verb_data| {
+                    .Delete, .Yank, .Change => |*verb_data| {
                         switch (c) {
-                            'd', 'y', 'e', 'w', 'j', 'k', '$', '^' => {
+                            'd', 'y', 'e', 'w', 'j', 'k', '$', '^', 'c' => {
                                 verb_data.motion = motionFromKey(c, builder_data.*);
                             },
                             'f', 'F', 't', 'T' => {
@@ -187,6 +188,7 @@ fn verbFromKey(character: u8, register: ?u8, range: ?u32) Verb {
     return switch (character) {
         'd' => Verb{ .Delete = VerbData{ .motion = Motion.Unset, .register = register } },
         'y' => Verb{ .Yank = VerbData{ .motion = Motion.Unset, .register = register } },
+        'c' => Verb{ .Change = VerbData{ .motion = Motion.Unset, .register = register } },
         'p' => Verb{
             .PasteForwards = PasteData{
                 .range = range orelse 1,
@@ -205,13 +207,13 @@ fn verbFromKey(character: u8, register: ?u8, range: ?u32) Verb {
 
 fn motionFromKey(character: u8, builder_data: VerbBuilderData) Motion {
     return switch (character) {
-        'd', 'y' => Motion{ .DownwardsLines = if (builder_data.range) |r| (r - 1) else 0 },
+        'd', 'y', 'c' => Motion{ .DownwardsLines = if (builder_data.range) |r| (r - 1) else 0 },
         'e' => Motion{ .UntilEndOfWord = builder_data.range orelse 1 },
         'w' => Motion{ .UntilNextWord = builder_data.range orelse 1 },
         'j' => Motion{ .DownwardsLines = builder_data.range orelse 1 },
         'k' => Motion{ .UpwardsLines = builder_data.range orelse 1 },
-        '$' => Motion{ .UntilEndOfLine = builder_data.range orelse 1 },
-        '^' => Motion{ .UntilBeginningOfLine = builder_data.range orelse 1 },
+        '$' => Motion{ .UntilEndOfLine = if (builder_data.range) |r| (r - 1) else 1 },
+        '^' => Motion{ .UntilBeginningOfLine = if (builder_data.range) |r| (r - 1) else 1 },
         'f' => Motion{ .ForwardsIncluding = null },
         'F' => Motion{ .BackwardsIncluding = null },
         't' => Motion{ .ForwardsExcluding = null },
@@ -785,6 +787,94 @@ test "`d^` = 'delete until beginning of line'" {
             switch (verb_data.motion) {
                 .UntilBeginningOfLine => |optional_lines| {
                     testing.expectEqual(optional_lines, 1);
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`cc` = 'change current line'" {
+    const input = "cc"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 1);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.Change);
+    switch (first_verb) {
+        .Change => |verb_data| {
+            testing.expectEqual(verb_data.register, null);
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
+            switch (verb_data.motion) {
+                .DownwardsLines => |lines| {
+                    testing.expectEqual(lines, 0);
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`cfe` = 'change until e forwards'" {
+    const input = "cfe"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 1);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.Change);
+    switch (first_verb) {
+        .Change => |verb_data| {
+            testing.expectEqual(verb_data.register, null);
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.ForwardsIncluding);
+            switch (verb_data.motion) {
+                .ForwardsIncluding => |character| {
+                    testing.expectEqual(character, 'e');
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`\"*cT$` = 'change backwards until but excluding the character $ into register *'" {
+    const input = "\"*cT$"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 1);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.Change);
+    switch (first_verb) {
+        .Change => |verb_data| {
+            testing.expectEqual(verb_data.register, '*');
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.BackwardsExcluding);
+            switch (verb_data.motion) {
+                .BackwardsExcluding => |character| {
+                    testing.expectEqual(character, '$');
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`15c$` = 'change to end of line downwards 14 lines'" {
+    const input = "15c$"[0..];
+    const verbs = try parseInput(direct_allocator, input);
+    testing.expectEqual(verbs.count(), 1);
+    const verb_slice = verbs.toSliceConst();
+    const first_verb = verb_slice[0];
+    testing.expect(std.meta.activeTag(first_verb) == Verb.Change);
+    switch (first_verb) {
+        .Change => |verb_data| {
+            testing.expectEqual(verb_data.register, null);
+            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.UntilEndOfLine);
+            switch (verb_data.motion) {
+                .UntilEndOfLine => |lines| {
+                    testing.expectEqual(lines, 14);
                 },
                 else => unreachable,
             }
