@@ -92,6 +92,8 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                         try verbs.append(verb);
                         state = ParseState{ .Start = VerbBuilderData{} };
                     },
+                    // @TODO: add 'C' support
+                    // needs to support range + registers
                     else => std.debug.panic(
                         "Not expecting character '{}', waiting for verb or range modifier",
                         c,
