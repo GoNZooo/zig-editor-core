@@ -48,7 +48,7 @@ pub fn FileBuffer(comptime T: type) type {
             };
         }
 
-        /// Deinitializes the `FileBuffer`, deinitializing all lines inside of it in the process.
+        /// De-initializes the `FileBuffer`, de-initializing all lines inside of it in the process.
         /// If the line stored in the `FileBuffer` has a `deinit()` method, it will be run
         /// automatically.
         pub fn deinit(self: *Self) void {
