@@ -22,6 +22,8 @@ pub const Motion = union(enum) {
     UntilBeginningOfLine: u32,
     DownwardsLines: u32,
     UpwardsLines: u32,
+    ForwardsParagraph: u32,
+    BackwardsParagraph: u32,
     ForwardsIncluding: ?u8,
     BackwardsIncluding: ?u8,
     ForwardsExcluding: ?u8,
@@ -151,6 +153,8 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
                             .UntilNextWord,
                             .DownwardsLines,
                             .UpwardsLines,
+                            .ForwardsParagraph,
+                            .BackwardsParagraph,
                             .UntilEndOfLine,
                             .UntilBeginningOfLine,
                             => std.debug.panic(
@@ -173,7 +177,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
                 switch (builder_data.command) {
                     .Delete, .Yank, .Change => |*command_data| {
                         switch (c) {
-                            'd', 'y', 'e', 'w', 'j', 'k', '$', '^', 'c' => {
+                            'd', 'y', 'e', 'w', 'j', 'k', '$', '^', 'c', '{', '}' => {
                                 command_data.motion = motionFromKey(c, builder_data.*);
                             },
                             'f', 'F', 't', 'T' => {
@@ -288,6 +292,8 @@ fn motionFromKey(character: u8, builder_data: CommandBuilderData) Motion {
         'F' => Motion{ .BackwardsIncluding = null },
         't' => Motion{ .ForwardsExcluding = null },
         'T' => Motion{ .BackwardsExcluding = null },
+        '}' => Motion{ .ForwardsParagraph = builder_data.range orelse 1 },
+        '{' => Motion{ .BackwardsParagraph = builder_data.range orelse 1 },
         else => std.debug.panic("unsupported motion: {}\n", character),
     };
 }
@@ -1077,6 +1083,50 @@ test "`15t)` = 'move to the 15th ocurrence forwards of )'" {
             switch (command_data.motion) {
                 .ForwardsExcluding => |character| {
                     testing.expectEqual(character, ')');
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`\"u2d}` = 'delete 2 paragraphs forwards into register u'" {
+    const input = "\"u2d}"[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expectEqual(command_data.register, 'u');
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.ForwardsParagraph);
+            switch (command_data.motion) {
+                .ForwardsParagraph => |paragraphs| {
+                    testing.expectEqual(paragraphs, 2);
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`\"o15y{` = 'yank 15 paragraphs backwards into register o'" {
+    const input = "\"o15y{"[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Yank);
+    switch (first_command) {
+        .Yank => |command_data| {
+            testing.expectEqual(command_data.register, 'o');
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.BackwardsParagraph);
+            switch (command_data.motion) {
+                .BackwardsParagraph => |paragraphs| {
+                    testing.expectEqual(paragraphs, 15);
                 },
                 else => unreachable,
             }
