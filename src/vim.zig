@@ -1019,4 +1019,70 @@ test "`3f\"` = 'move to the third ocurrence forwards of \"'" {
     }
 }
 
+test "`150F(` = 'move unto the 150th ocurrence backwards of ('" {
+    const input = "150F("[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
+    switch (first_command) {
+        .MotionOnly => |command_data| {
+            testing.expectEqual(command_data.register, null);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.BackwardsIncluding);
+            switch (command_data.motion) {
+                .BackwardsIncluding => |character| {
+                    testing.expectEqual(character, '(');
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`2T(` = 'move to the 2nd ocurrence backwards of ('" {
+    const input = "2T("[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
+    switch (first_command) {
+        .MotionOnly => |command_data| {
+            testing.expectEqual(command_data.register, null);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.BackwardsExcluding);
+            switch (command_data.motion) {
+                .BackwardsExcluding => |character| {
+                    testing.expectEqual(character, '(');
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`15t)` = 'move to the 15th ocurrence forwards of )'" {
+    const input = "15t)"[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
+    switch (first_command) {
+        .MotionOnly => |command_data| {
+            testing.expectEqual(command_data.register, null);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.ForwardsExcluding);
+            switch (command_data.motion) {
+                .ForwardsExcluding => |character| {
+                    testing.expectEqual(character, ')');
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
 pub fn runTests() void {}
