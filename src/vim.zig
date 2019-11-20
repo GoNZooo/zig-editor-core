@@ -4,7 +4,7 @@ const mem = std.mem;
 const direct_allocator = std.heap.direct_allocator;
 const ArrayList = std.ArrayList;
 
-pub const VerbData = struct {
+pub const CommandData = struct {
     motion: Motion,
     register: ?u8,
 };
@@ -28,36 +28,37 @@ pub const Motion = union(enum) {
     BackwardsExcluding: ?u8,
 };
 
-pub const Verb = union(enum) {
+pub const Command = union(enum) {
     Unset,
-    Delete: VerbData,
-    Yank: VerbData,
-    Change: VerbData,
+    MotionOnly: CommandData,
+    Delete: CommandData,
+    Yank: CommandData,
+    Change: CommandData,
     PasteForwards: PasteData,
     PasteBackwards: PasteData,
 };
 
-const VerbBuilderData = struct {
+const CommandBuilderData = struct {
     range: ?u32 = null,
     range_modifiers: u32 = 0,
     register: ?u8 = null,
-    verb: Verb = Verb.Unset,
+    command: Command = Command.Unset,
 };
 
 const ParseState = union(enum) {
-    Start: VerbBuilderData,
-    WaitingForMotion: VerbBuilderData,
-    WaitingForTarget: VerbBuilderData,
-    WaitingForRegisterCharacter: VerbBuilderData,
+    Start: CommandBuilderData,
+    WaitingForMotion: CommandBuilderData,
+    WaitingForTarget: CommandBuilderData,
+    WaitingForRegisterCharacter: CommandBuilderData,
 };
 
-pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb) {
-    var verbs = ArrayList(Verb).init(allocator);
+pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Command) {
+    var commands = ArrayList(Command).init(allocator);
     var state: ParseState = ParseState{
-        .Start = VerbBuilderData{
+        .Start = CommandBuilderData{
             .range = null,
             .register = null,
-            .verb = .Unset,
+            .command = .Unset,
             .range_modifiers = 0,
         },
     };
@@ -80,24 +81,34 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                         builder_data.range_modifiers += 1;
                     },
                     'd', 'y', 'c' => {
-                        const verb = verbFromKey(c, builder_data.register, builder_data.range);
+                        const command = commandFromKey(c, builder_data.register, builder_data.range);
                         state = ParseState{
-                            .WaitingForMotion = VerbBuilderData{
-                                .verb = verb,
+                            .WaitingForMotion = CommandBuilderData{
+                                .command = command,
                                 .register = builder_data.register,
                                 .range = builder_data.range,
                             },
                         };
                     },
-                    'p', 'P' => {
-                        const verb = verbFromKey(c, builder_data.register, builder_data.range);
-                        try verbs.append(verb);
-                        state = ParseState{ .Start = VerbBuilderData{} };
+                    'p', 'P', 'j', 'k', '$', '^' => {
+                        const command = commandFromKey(c, builder_data.register, builder_data.range);
+                        try commands.append(command);
+                        state = ParseState{ .Start = CommandBuilderData{} };
                     },
+                    'f', 'F', 't', 'T' => {
+                        builder_data.command = commandFromKey(c, builder_data.register, builder_data.range);
+
+                        state = ParseState{ .WaitingForTarget = builder_data.* };
+                    },
+
                     // @TODO: add 'C' support
                     // needs to support range + registers
+
+                    // @TODO: add 'D' support
+                    // needs to support range + registers
+
                     else => std.debug.panic(
-                        "Not expecting character '{}', waiting for verb or range modifier",
+                        "Not expecting character '{}', waiting for command or range modifier",
                         c,
                     ),
                 }
@@ -114,9 +125,9 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
             },
 
             ParseState.WaitingForTarget => |*builder_data| {
-                switch (builder_data.verb) {
-                    .Delete, .Yank, .Change => |*verb_data| {
-                        switch (verb_data.motion) {
+                switch (builder_data.command) {
+                    .Delete, .Yank, .Change, .MotionOnly => |*command_data| {
+                        switch (command_data.motion) {
                             .ForwardsIncluding,
                             .BackwardsIncluding,
                             .ForwardsExcluding,
@@ -131,29 +142,29 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                             .UntilBeginningOfLine,
                             => std.debug.panic(
                                 "non-target motion waiting for target: {}\n",
-                                verb_data.motion,
+                                command_data.motion,
                             ),
                         }
                     },
                     .PasteForwards, .PasteBackwards => std.debug.panic(
-                        "invalid verb for `WaitingForTarget`: {}\n",
-                        builder_data.verb,
+                        "invalid command for `WaitingForTarget`: {}\n",
+                        builder_data.command,
                     ),
-                    .Unset => std.debug.panic("no verb set when waiting for target"),
+                    .Unset => std.debug.panic("no command set when waiting for target"),
                 }
-                try verbs.append(builder_data.verb);
-                state = ParseState{ .Start = VerbBuilderData{} };
+                try commands.append(builder_data.command);
+                state = ParseState{ .Start = CommandBuilderData{} };
             },
 
             ParseState.WaitingForMotion => |*builder_data| {
-                switch (builder_data.verb) {
-                    .Delete, .Yank, .Change => |*verb_data| {
+                switch (builder_data.command) {
+                    .Delete, .Yank, .Change => |*command_data| {
                         switch (c) {
                             'd', 'y', 'e', 'w', 'j', 'k', '$', '^', 'c' => {
-                                verb_data.motion = motionFromKey(c, builder_data.*);
+                                command_data.motion = motionFromKey(c, builder_data.*);
                             },
                             'f', 'F', 't', 'T' => {
-                                verb_data.motion = motionFromKey(c, builder_data.*);
+                                command_data.motion = motionFromKey(c, builder_data.*);
                                 state = ParseState{ .WaitingForTarget = builder_data.* };
                             },
                             else => std.debug.panic("unimplemented motion: {}\n", c),
@@ -162,48 +173,96 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Verb)
                         switch (state) {
                             .WaitingForTarget => {},
                             else => {
-                                try verbs.append(builder_data.verb);
+                                try commands.append(builder_data.command);
                                 state = ParseState{
-                                    .Start = VerbBuilderData{},
+                                    .Start = CommandBuilderData{},
                                 };
                             },
                         }
                     },
-                    .PasteForwards, .PasteBackwards => std.debug.panic(
-                        "invalid verb for `WaitingForMotion`: {}\n",
-                        builder_data.verb,
+                    .PasteForwards, .PasteBackwards, .MotionOnly => std.debug.panic(
+                        "invalid command for `WaitingForMotion`: {}\n",
+                        builder_data.command,
                     ),
-                    .Unset => std.debug.panic("no verb when waiting for motion"),
+                    .Unset => std.debug.panic("no command when waiting for motion"),
                 }
             },
         }
     }
 
-    return verbs;
+    return commands;
 }
 
-fn verbFromKey(character: u8, register: ?u8, range: ?u32) Verb {
+fn commandFromKey(character: u8, register: ?u8, range: ?u32) Command {
     return switch (character) {
-        'd' => Verb{ .Delete = VerbData{ .motion = Motion.Unset, .register = register } },
-        'y' => Verb{ .Yank = VerbData{ .motion = Motion.Unset, .register = register } },
-        'c' => Verb{ .Change = VerbData{ .motion = Motion.Unset, .register = register } },
-        'p' => Verb{
+        'd' => Command{ .Delete = CommandData{ .motion = Motion.Unset, .register = register } },
+        'y' => Command{ .Yank = CommandData{ .motion = Motion.Unset, .register = register } },
+        'c' => Command{ .Change = CommandData{ .motion = Motion.Unset, .register = register } },
+        'p' => Command{
             .PasteForwards = PasteData{
                 .range = range orelse 1,
                 .register = register,
             },
         },
-        'P' => Verb{
+        'P' => Command{
             .PasteBackwards = PasteData{
                 .range = range orelse 1,
                 .register = register,
             },
         },
-        else => std.debug.panic("unsupported verb key: {}\n", character),
+        'j' => Command{
+            .MotionOnly = CommandData{
+                .motion = Motion{ .DownwardsLines = range orelse 1 },
+                .register = register,
+            },
+        },
+        'k' => Command{
+            .MotionOnly = CommandData{
+                .motion = Motion{ .UpwardsLines = range orelse 1 },
+                .register = register,
+            },
+        },
+        '$' => Command{
+            .MotionOnly = CommandData{
+                .motion = Motion{ .UntilEndOfLine = range orelse 1 },
+                .register = register,
+            },
+        },
+        '^' => Command{
+            .MotionOnly = CommandData{
+                .motion = Motion{ .UntilBeginningOfLine = range orelse 1 },
+                .register = register,
+            },
+        },
+        'f' => Command{
+            .MotionOnly = CommandData{
+                .motion = Motion{ .ForwardsIncluding = null },
+                .register = register,
+            },
+        },
+        'F' => Command{
+            .MotionOnly = CommandData{
+                .motion = Motion{ .BackwardsIncluding = null },
+                .register = register,
+            },
+        },
+        't' => Command{
+            .MotionOnly = CommandData{
+                .motion = Motion{ .ForwardsExcluding = null },
+                .register = register,
+            },
+        },
+        'T' => Command{
+            .MotionOnly = CommandData{
+                .motion = Motion{ .BackwardsExcluding = null },
+                .register = register,
+            },
+        },
+        else => std.debug.panic("unsupported command key: {}\n", character),
     };
 }
 
-fn motionFromKey(character: u8, builder_data: VerbBuilderData) Motion {
+fn motionFromKey(character: u8, builder_data: CommandBuilderData) Motion {
     return switch (character) {
         'd', 'y', 'c' => Motion{ .DownwardsLines = if (builder_data.range) |r| (r - 1) else 0 },
         'e' => Motion{ .UntilEndOfWord = builder_data.range orelse 1 },
@@ -220,28 +279,28 @@ fn motionFromKey(character: u8, builder_data: VerbBuilderData) Motion {
     };
 }
 
-test "can get active tag of verb" {
-    const verb = Verb{ .Delete = VerbData{ .motion = Motion.Unset, .register = null } };
-    testing.expect(std.meta.activeTag(verb) == Verb.Delete);
-    switch (verb) {
-        .Delete => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.Unset);
+test "can get active tag of command" {
+    const command = Command{ .Delete = CommandData{ .motion = Motion.Unset, .register = null } };
+    testing.expect(std.meta.activeTag(command) == Command.Delete);
+    switch (command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.Unset);
         },
         else => unreachable,
     }
 }
 
-test "`dd` creates a delete verb" {
+test "`dd` creates a delete command" {
     const input = "dd"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(verb) == Verb.Delete);
-    switch (verb) {
-        .Delete => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const command = command_slice[0];
+    testing.expect(std.meta.activeTag(command) == Command.Delete);
+    switch (command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.DownwardsLines);
+            switch (command_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 0);
                 },
@@ -252,17 +311,17 @@ test "`dd` creates a delete verb" {
     }
 }
 
-test "`dddd` = two delete verbs" {
+test "`dddd` = two delete commands" {
     const input = "dddd"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 2);
-    const verb_slice = verbs.toSliceConst();
-    for (verb_slice) |verb| {
-        testing.expect(std.meta.activeTag(verb) == Verb.Delete);
-        switch (verb) {
-            .Delete => |verb_data| {
-                testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
-                switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 2);
+    const command_slice = commands.toSliceConst();
+    for (command_slice) |command| {
+        testing.expect(std.meta.activeTag(command) == Command.Delete);
+        switch (command) {
+            .Delete => |command_data| {
+                testing.expect(std.meta.activeTag(command_data.motion) == Motion.DownwardsLines);
+                switch (command_data.motion) {
                     .DownwardsLines => |lines| {
                         testing.expectEqual(lines, 0);
                     },
@@ -274,18 +333,18 @@ test "`dddd` = two delete verbs" {
     }
 }
 
-test "`ddde` = two delete verbs, last one until end of word" {
+test "`ddde` = two delete commands, last one until end of word" {
     const input = "ddde"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 2);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    const second_verb = verb_slice[1];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
-    switch (first_verb) {
-        .Delete => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 2);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    const second_command = command_slice[1];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.DownwardsLines);
+            switch (command_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 0);
                 },
@@ -294,11 +353,11 @@ test "`ddde` = two delete verbs, last one until end of word" {
         },
         else => unreachable,
     }
-    testing.expect(std.meta.activeTag(second_verb) == Verb.Delete);
-    switch (second_verb) {
-        .Delete => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.UntilEndOfWord);
-            switch (verb_data.motion) {
+    testing.expect(std.meta.activeTag(second_command) == Command.Delete);
+    switch (second_command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.UntilEndOfWord);
+            switch (command_data.motion) {
                 .UntilEndOfWord => |words| {
                     testing.expectEqual(words, 1);
                 },
@@ -311,15 +370,15 @@ test "`ddde` = two delete verbs, last one until end of word" {
 
 test "`dw` = 'delete until next word'" {
     const input = "dw"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
-    switch (first_verb) {
-        .Delete => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.UntilNextWord);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.UntilNextWord);
+            switch (command_data.motion) {
                 .UntilNextWord => |words| {
                     testing.expectEqual(words, 1);
                 },
@@ -332,15 +391,15 @@ test "`dw` = 'delete until next word'" {
 
 test "`dj` = 'delete one line downwards'" {
     const input = "dj"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
-    switch (first_verb) {
-        .Delete => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.DownwardsLines);
+            switch (command_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 1);
                 },
@@ -353,15 +412,15 @@ test "`dj` = 'delete one line downwards'" {
 
 test "`dk` = 'delete one line upwards'" {
     const input = "dk"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
-    switch (first_verb) {
-        .Delete => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.UpwardsLines);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.UpwardsLines);
+            switch (command_data.motion) {
                 .UpwardsLines => |lines| {
                     testing.expectEqual(lines, 1);
                 },
@@ -374,15 +433,15 @@ test "`dk` = 'delete one line upwards'" {
 
 test "`5dj` = 'delete 5 lines downwards'" {
     const input = "5dj"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
-    switch (first_verb) {
-        .Delete => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.DownwardsLines);
+            switch (command_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 5);
                 },
@@ -395,15 +454,15 @@ test "`5dj` = 'delete 5 lines downwards'" {
 
 test "`5dk` = 'delete 5 lines upwards'" {
     const input = "5dk"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
-    switch (first_verb) {
-        .Delete => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.UpwardsLines);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.UpwardsLines);
+            switch (command_data.motion) {
                 .UpwardsLines => |lines| {
                     testing.expectEqual(lines, 5);
                 },
@@ -416,15 +475,15 @@ test "`5dk` = 'delete 5 lines upwards'" {
 
 test "`5dd` = 'delete 4 lines downwards'" {
     const input = "5dd"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
-    switch (first_verb) {
-        .Delete => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.DownwardsLines);
+            switch (command_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 4);
                 },
@@ -437,15 +496,15 @@ test "`5dd` = 'delete 4 lines downwards'" {
 
 test "`52dd` = 'delete 51 lines downwards'" {
     const input = "52dd"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
-    switch (first_verb) {
-        .Delete => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.DownwardsLines);
+            switch (command_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 51);
                 },
@@ -458,15 +517,15 @@ test "`52dd` = 'delete 51 lines downwards'" {
 
 test "`52dj` = 'delete 52 lines downwards'" {
     const input = "52dj"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
-    switch (first_verb) {
-        .Delete => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.DownwardsLines);
+            switch (command_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 52);
                 },
@@ -479,15 +538,15 @@ test "`52dj` = 'delete 52 lines downwards'" {
 
 test "`5232dj` = 'delete 5232 lines downwards'" {
     const input = "5232dj"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
-    switch (first_verb) {
-        .Delete => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.DownwardsLines);
+            switch (command_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 5232);
                 },
@@ -500,17 +559,17 @@ test "`5232dj` = 'delete 5232 lines downwards'" {
 
 test "`5232dj2301dk` = 'delete 5232 lines downwards' & 'delete 2301 lines upwards'" {
     const input = "5232dj2301dk"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 2);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    const second_verb = verb_slice[1];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
-    testing.expect(std.meta.activeTag(second_verb) == Verb.Delete);
-    switch (first_verb) {
-        .Delete => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 2);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    const second_command = command_slice[1];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    testing.expect(std.meta.activeTag(second_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.DownwardsLines);
+            switch (command_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 5232);
                 },
@@ -519,10 +578,10 @@ test "`5232dj2301dk` = 'delete 5232 lines downwards' & 'delete 2301 lines upward
         },
         else => unreachable,
     }
-    switch (second_verb) {
-        .Delete => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.UpwardsLines);
-            switch (verb_data.motion) {
+    switch (second_command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.UpwardsLines);
+            switch (command_data.motion) {
                 .UpwardsLines => |lines| {
                     testing.expectEqual(lines, 2301);
                 },
@@ -535,15 +594,15 @@ test "`5232dj2301dk` = 'delete 5232 lines downwards' & 'delete 2301 lines upward
 
 test "`5232yy` = 'yank 5231 lines downwards'" {
     const input = "5232yy"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Yank);
-    switch (first_verb) {
-        .Yank => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Yank);
+    switch (first_command) {
+        .Yank => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.DownwardsLines);
+            switch (command_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 5231);
                 },
@@ -556,17 +615,17 @@ test "`5232yy` = 'yank 5231 lines downwards'" {
 
 test "`522yj201yk` = 'yank 522 lines downwards' & 'yank 231 lines upwards'" {
     const input = "522yj201yk"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 2);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    const second_verb = verb_slice[1];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Yank);
-    testing.expect(std.meta.activeTag(second_verb) == Verb.Yank);
-    switch (first_verb) {
-        .Yank => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 2);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    const second_command = command_slice[1];
+    testing.expect(std.meta.activeTag(first_command) == Command.Yank);
+    testing.expect(std.meta.activeTag(second_command) == Command.Yank);
+    switch (first_command) {
+        .Yank => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.DownwardsLines);
+            switch (command_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 522);
                 },
@@ -575,10 +634,10 @@ test "`522yj201yk` = 'yank 522 lines downwards' & 'yank 231 lines upwards'" {
         },
         else => unreachable,
     }
-    switch (second_verb) {
-        .Yank => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.UpwardsLines);
-            switch (verb_data.motion) {
+    switch (second_command) {
+        .Yank => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.UpwardsLines);
+            switch (command_data.motion) {
                 .UpwardsLines => |lines| {
                     testing.expectEqual(lines, 201);
                 },
@@ -591,15 +650,15 @@ test "`522yj201yk` = 'yank 522 lines downwards' & 'yank 231 lines upwards'" {
 
 test "`df)` = 'delete to and including )'" {
     const input = "df)"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
-    switch (first_verb) {
-        .Delete => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.ForwardsIncluding);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.ForwardsIncluding);
+            switch (command_data.motion) {
                 .ForwardsIncluding => |character| {
                     testing.expectEqual(character, ')');
                 },
@@ -612,15 +671,15 @@ test "`df)` = 'delete to and including )'" {
 
 test "`dF)` = 'delete back to and including )'" {
     const input = "dF)"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
-    switch (first_verb) {
-        .Delete => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.BackwardsIncluding);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.BackwardsIncluding);
+            switch (command_data.motion) {
                 .BackwardsIncluding => |character| {
                     testing.expectEqual(character, ')');
                 },
@@ -633,15 +692,15 @@ test "`dF)` = 'delete back to and including )'" {
 
 test "`dt)` = 'delete to but excluding )'" {
     const input = "dt)"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
-    switch (first_verb) {
-        .Delete => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.ForwardsExcluding);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.ForwardsExcluding);
+            switch (command_data.motion) {
                 .ForwardsExcluding => |character| {
                     testing.expectEqual(character, ')');
                 },
@@ -654,15 +713,15 @@ test "`dt)` = 'delete to but excluding )'" {
 
 test "`dT)` = 'delete back to but excluding )'" {
     const input = "dT)"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
-    switch (first_verb) {
-        .Delete => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.BackwardsExcluding);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.BackwardsExcluding);
+            switch (command_data.motion) {
                 .BackwardsExcluding => |character| {
                     testing.expectEqual(character, ')');
                 },
@@ -675,16 +734,16 @@ test "`dT)` = 'delete back to but excluding )'" {
 
 test "`\"add` = 'delete current line into register a'" {
     const input = "\"add"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
-    switch (first_verb) {
-        .Delete => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
-            testing.expectEqual(verb_data.register, 'a');
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.DownwardsLines);
+            testing.expectEqual(command_data.register, 'a');
+            switch (command_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 0);
                 },
@@ -697,16 +756,16 @@ test "`\"add` = 'delete current line into register a'" {
 
 test "`\"+5dj` = 'delete 5 lines down into register +'" {
     const input = "\"+5dj"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
-    switch (first_verb) {
-        .Delete => |verb_data| {
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
-            testing.expectEqual(verb_data.register, '+');
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.DownwardsLines);
+            testing.expectEqual(command_data.register, '+');
+            switch (command_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 5);
                 },
@@ -719,12 +778,12 @@ test "`\"+5dj` = 'delete 5 lines down into register +'" {
 
 test "`p` = 'paste forwards'" {
     const input = "p"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.PasteForwards);
-    switch (first_verb) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.PasteForwards);
+    switch (first_command) {
         .PasteForwards => |paste_data| {
             testing.expectEqual(paste_data.range, 1);
             testing.expectEqual(paste_data.register, null);
@@ -735,12 +794,12 @@ test "`p` = 'paste forwards'" {
 
 test "`\"a3P` = 'paste backwards 3 times from register a'" {
     const input = "\"a3P"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.PasteBackwards);
-    switch (first_verb) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.PasteBackwards);
+    switch (first_command) {
         .PasteBackwards => |paste_data| {
             testing.expectEqual(paste_data.range, 3);
             testing.expectEqual(paste_data.register, 'a');
@@ -751,16 +810,16 @@ test "`\"a3P` = 'paste backwards 3 times from register a'" {
 
 test "`d$` = 'delete until end of line'" {
     const input = "d$"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
-    switch (first_verb) {
-        .Delete => |verb_data| {
-            testing.expectEqual(verb_data.register, null);
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.UntilEndOfLine);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expectEqual(command_data.register, null);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.UntilEndOfLine);
+            switch (command_data.motion) {
                 .UntilEndOfLine => |optional_lines| {
                     testing.expectEqual(optional_lines, 1);
                 },
@@ -773,16 +832,16 @@ test "`d$` = 'delete until end of line'" {
 
 test "`d^` = 'delete until beginning of line'" {
     const input = "d^"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Delete);
-    switch (first_verb) {
-        .Delete => |verb_data| {
-            testing.expectEqual(verb_data.register, null);
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.UntilBeginningOfLine);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expectEqual(command_data.register, null);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.UntilBeginningOfLine);
+            switch (command_data.motion) {
                 .UntilBeginningOfLine => |optional_lines| {
                     testing.expectEqual(optional_lines, 1);
                 },
@@ -795,16 +854,16 @@ test "`d^` = 'delete until beginning of line'" {
 
 test "`cc` = 'change current line'" {
     const input = "cc"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Change);
-    switch (first_verb) {
-        .Change => |verb_data| {
-            testing.expectEqual(verb_data.register, null);
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.DownwardsLines);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Change);
+    switch (first_command) {
+        .Change => |command_data| {
+            testing.expectEqual(command_data.register, null);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.DownwardsLines);
+            switch (command_data.motion) {
                 .DownwardsLines => |lines| {
                     testing.expectEqual(lines, 0);
                 },
@@ -817,16 +876,16 @@ test "`cc` = 'change current line'" {
 
 test "`cfe` = 'change until e forwards'" {
     const input = "cfe"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Change);
-    switch (first_verb) {
-        .Change => |verb_data| {
-            testing.expectEqual(verb_data.register, null);
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.ForwardsIncluding);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Change);
+    switch (first_command) {
+        .Change => |command_data| {
+            testing.expectEqual(command_data.register, null);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.ForwardsIncluding);
+            switch (command_data.motion) {
                 .ForwardsIncluding => |character| {
                     testing.expectEqual(character, 'e');
                 },
@@ -839,16 +898,16 @@ test "`cfe` = 'change until e forwards'" {
 
 test "`\"*cT$` = 'change backwards until but excluding the character $ into register *'" {
     const input = "\"*cT$"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Change);
-    switch (first_verb) {
-        .Change => |verb_data| {
-            testing.expectEqual(verb_data.register, '*');
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.BackwardsExcluding);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Change);
+    switch (first_command) {
+        .Change => |command_data| {
+            testing.expectEqual(command_data.register, '*');
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.BackwardsExcluding);
+            switch (command_data.motion) {
                 .BackwardsExcluding => |character| {
                     testing.expectEqual(character, '$');
                 },
@@ -861,18 +920,84 @@ test "`\"*cT$` = 'change backwards until but excluding the character $ into regi
 
 test "`15c$` = 'change to end of line downwards 14 lines'" {
     const input = "15c$"[0..];
-    const verbs = try parseInput(direct_allocator, input);
-    testing.expectEqual(verbs.count(), 1);
-    const verb_slice = verbs.toSliceConst();
-    const first_verb = verb_slice[0];
-    testing.expect(std.meta.activeTag(first_verb) == Verb.Change);
-    switch (first_verb) {
-        .Change => |verb_data| {
-            testing.expectEqual(verb_data.register, null);
-            testing.expect(std.meta.activeTag(verb_data.motion) == Motion.UntilEndOfLine);
-            switch (verb_data.motion) {
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Change);
+    switch (first_command) {
+        .Change => |command_data| {
+            testing.expectEqual(command_data.register, null);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.UntilEndOfLine);
+            switch (command_data.motion) {
                 .UntilEndOfLine => |lines| {
                     testing.expectEqual(lines, 14);
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`15j` = 'move down 15 lines'" {
+    const input = "15j"[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
+    switch (first_command) {
+        .MotionOnly => |command_data| {
+            testing.expectEqual(command_data.register, null);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.DownwardsLines);
+            switch (command_data.motion) {
+                .DownwardsLines => |lines| {
+                    testing.expectEqual(lines, 15);
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`14$` = 'move to the end of the line, 14 lines down'" {
+    const input = "14$"[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
+    switch (first_command) {
+        .MotionOnly => |command_data| {
+            testing.expectEqual(command_data.register, null);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.UntilEndOfLine);
+            switch (command_data.motion) {
+                .UntilEndOfLine => |lines| {
+                    testing.expectEqual(lines, 14);
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`3f\"` = 'move to the third ocurrence forwards of \"'" {
+    const input = "3f\""[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
+    switch (first_command) {
+        .MotionOnly => |command_data| {
+            testing.expectEqual(command_data.register, null);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.ForwardsIncluding);
+            switch (command_data.motion) {
+                .ForwardsIncluding => |character| {
+                    testing.expectEqual(character, '\"');
                 },
                 else => unreachable,
             }
