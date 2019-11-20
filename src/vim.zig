@@ -96,7 +96,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
                             },
                         };
                     },
-                    'p', 'P', 'j', 'k', '$', '^' => {
+                    'p', 'P', 'j', 'k', '$', '^', '{', '}' => {
                         const command = commandFromKey(
                             c,
                             builder_data.register,
@@ -248,6 +248,18 @@ fn commandFromKey(character: u8, register: ?u8, range: ?u32) Command {
         '^' => Command{
             .MotionOnly = CommandData{
                 .motion = Motion{ .UntilBeginningOfLine = range orelse 1 },
+                .register = register,
+            },
+        },
+        '}' => Command{
+            .MotionOnly = CommandData{
+                .motion = Motion{ .ForwardsParagraph = range orelse 1 },
+                .register = register,
+            },
+        },
+        '{' => Command{
+            .MotionOnly = CommandData{
+                .motion = Motion{ .BackwardsParagraph = range orelse 1 },
                 .register = register,
             },
         },
@@ -1127,6 +1139,42 @@ test "`\"o15y{` = 'yank 15 paragraphs backwards into register o'" {
             switch (command_data.motion) {
                 .BackwardsParagraph => |paragraphs| {
                     testing.expectEqual(paragraphs, 15);
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`}2{` = 'go forward one paragraph, go back two paragraphs'" {
+    const input = "}2{"[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 2);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    const second_command = command_slice[1];
+    testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
+    switch (first_command) {
+        .MotionOnly => |command_data| {
+            testing.expectEqual(command_data.register, null);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.ForwardsParagraph);
+            switch (command_data.motion) {
+                .ForwardsParagraph => |paragraphs| {
+                    testing.expectEqual(paragraphs, 1);
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+    switch (second_command) {
+        .MotionOnly => |command_data| {
+            testing.expectEqual(command_data.register, null);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.BackwardsParagraph);
+            switch (command_data.motion) {
+                .BackwardsParagraph => |paragraphs| {
+                    testing.expectEqual(paragraphs, 2);
                 },
                 else => unreachable,
             }
