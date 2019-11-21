@@ -164,7 +164,14 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
                         try commands.append(builder_data.command);
                         state = ParseState{ .Start = CommandBuilderData{} };
                     },
-                    else => std.debug.panic(
+                    .Yank,
+                    .PasteForwards,
+                    .PasteBackwards,
+                    .Delete,
+                    .MotionOnly,
+                    .Unset,
+                    .Change,
+                    => std.debug.panic(
                         "Invalid command for `WaitingForMark`: {}\n",
                         builder_data.command,
                     ),
