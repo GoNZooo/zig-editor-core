@@ -20,6 +20,7 @@ pub const Motion = union(enum) {
     UntilNextWord: u32,
     UntilEndOfLine: u32,
     UntilBeginningOfLine: u32,
+    UntilColumnZero,
     DownwardsLines: u32,
     UpwardsLines: u32,
     ForwardsParagraph: u32,
@@ -157,6 +158,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
                             .BackwardsParagraph,
                             .UntilEndOfLine,
                             .UntilBeginningOfLine,
+                            .UntilColumnZero,
                             => std.debug.panic(
                                 "non-target motion waiting for target: {}\n",
                                 command_data.motion,
@@ -177,7 +179,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
                 switch (builder_data.command) {
                     .Delete, .Yank, .Change => |*command_data| {
                         switch (c) {
-                            'd', 'y', 'e', 'w', 'j', 'k', '$', '^', 'c', '{', '}' => {
+                            'd', 'y', 'e', 'w', 'j', 'k', '$', '^', 'c', '{', '}', '0' => {
                                 command_data.motion = motionFromKey(c, builder_data.*);
                             },
                             'f', 'F', 't', 'T' => {
@@ -306,6 +308,7 @@ fn motionFromKey(character: u8, builder_data: CommandBuilderData) Motion {
         'T' => Motion{ .BackwardsExcluding = null },
         '}' => Motion{ .ForwardsParagraph = builder_data.range orelse 1 },
         '{' => Motion{ .BackwardsParagraph = builder_data.range orelse 1 },
+        '0' => Motion.UntilColumnZero,
         else => std.debug.panic("unsupported motion: {}\n", character),
     };
 }
@@ -1178,6 +1181,30 @@ test "`}2{` = 'go forward one paragraph, go back two paragraphs'" {
                 },
                 else => unreachable,
             }
+        },
+        else => unreachable,
+    }
+}
+
+test "`\"ay0\"a3p` = 'yank until column zero into register a, paste from register a 3 times'" {
+    const input = "\"ay0\"a3p"[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 2);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    const second_command = command_slice[1];
+    testing.expect(std.meta.activeTag(first_command) == Command.Yank);
+    switch (first_command) {
+        .Yank => |command_data| {
+            testing.expectEqual(command_data.register, 'a');
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.UntilColumnZero);
+        },
+        else => unreachable,
+    }
+    switch (second_command) {
+        .PasteForwards => |paste_data| {
+            testing.expectEqual(paste_data.register, 'a');
+            testing.expectEqual(paste_data.range, 3);
         },
         else => unreachable,
     }
