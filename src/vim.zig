@@ -29,6 +29,8 @@ pub const Motion = union(enum) {
     BackwardsIncluding: ?u8,
     ForwardsExcluding: ?u8,
     BackwardsExcluding: ?u8,
+    ToMarkLine: ?u8,
+    ToMarkPosition: ?u8,
 };
 
 pub const Command = union(enum) {
@@ -40,8 +42,6 @@ pub const Command = union(enum) {
     PasteForwards: PasteData,
     PasteBackwards: PasteData,
     SetMark: ?u8,
-    JumpMarkLine: ?u8,
-    JumpMarkPosition: ?u8,
 };
 
 const CommandBuilderData = struct {
@@ -142,7 +142,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
                     // Interestingly VSCodeVim does not support ranges for `D`
 
                     else => std.debug.panic(
-                        "Not expecting character '{}', waiting for command or range modifier",
+                        "Not expecting character '{c}', waiting for command or range modifier",
                         c,
                     ),
                 }
@@ -160,16 +160,44 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
 
             ParseState.WaitingForMark => |*builder_data| {
                 switch (builder_data.command) {
-                    .SetMark, .JumpMarkLine, .JumpMarkPosition => |*mark| {
+                    .SetMark => |*mark| {
                         mark.* = c;
                         try commands.append(builder_data.command);
                         state = ParseState{ .Start = CommandBuilderData{} };
+                    },
+                    .MotionOnly => |*command_data| {
+                        switch (command_data.motion) {
+                            .ToMarkLine, .ToMarkPosition => |*mark| {
+                                mark.* = c;
+                                try commands.append(builder_data.command);
+                                state = ParseState{ .Start = CommandBuilderData{} };
+                            },
+                            .BackwardsExcluding,
+                            .BackwardsIncluding,
+                            .ForwardsIncluding,
+                            .ForwardsExcluding,
+                            .UntilBeginningOfLine,
+                            .UntilColumnZero,
+                            .UntilEndOfLine,
+                            .UntilEndOfWord,
+                            .UntilNextWord,
+                            .UpwardsLines,
+                            .DownwardsLines,
+                            .BackwardsParagraph,
+                            .ForwardsParagraph,
+                            .Unset,
+                            => {
+                                std.debug.panic(
+                                    "invalid motion for `WaitingForMark`: {}\n",
+                                    command_data.motion,
+                                );
+                            },
+                        }
                     },
                     .Yank,
                     .PasteForwards,
                     .PasteBackwards,
                     .Delete,
-                    .MotionOnly,
                     .Unset,
                     .Change,
                     => std.debug.panic(
@@ -202,6 +230,8 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
                             .UntilEndOfLine,
                             .UntilBeginningOfLine,
                             .UntilColumnZero,
+                            .ToMarkLine,
+                            .ToMarkPosition,
                             => std.debug.panic(
                                 "non-target motion waiting for target: {}\n",
                                 command_data.motion,
@@ -211,8 +241,6 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
                     .PasteForwards,
                     .PasteBackwards,
                     .SetMark,
-                    .JumpMarkLine,
-                    .JumpMarkPosition,
                     => std.debug.panic(
                         "invalid command for `WaitingForTarget`: {}\n",
                         builder_data.command,
@@ -251,8 +279,6 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
                     .PasteBackwards,
                     .MotionOnly,
                     .SetMark,
-                    .JumpMarkLine,
-                    .JumpMarkPosition,
                     => std.debug.panic(
                         "invalid command for `WaitingForMotion`: {}\n",
                         builder_data.command,
@@ -344,8 +370,22 @@ fn commandFromKey(character: u8, register: ?u8, range: ?u32) Command {
             },
         },
         'm' => Command{ .SetMark = null },
-        '\'' => Command{ .JumpMarkLine = null },
-        '`' => Command{ .JumpMarkPosition = null },
+        '\'' => Command{
+            .MotionOnly = CommandData{
+                .motion = Motion{
+                    .ToMarkLine = null,
+                },
+                .register = null,
+            },
+        },
+        '`' => Command{
+            .MotionOnly = CommandData{
+                .motion = Motion{
+                    .ToMarkPosition = null,
+                },
+                .register = null,
+            },
+        },
         else => std.debug.panic("unsupported command key: {}\n", character),
     };
 }
@@ -1294,8 +1334,15 @@ test "`maj'a` = 'set mark a, move one line down, move to mark a's line'" {
         },
         else => unreachable,
     }
+    testing.expect(std.meta.activeTag(third_command) == Command.MotionOnly);
     switch (third_command) {
-        .JumpMarkLine => |mark| testing.expectEqual(mark, 'a'),
+        .MotionOnly => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.ToMarkLine);
+            switch (command_data.motion) {
+                .ToMarkLine => |mark| testing.expectEqual(mark, 'a'),
+                else => unreachable,
+            }
+        },
         else => unreachable,
     }
 }
@@ -1327,8 +1374,15 @@ test "`maj`a` = 'set mark a, move one line down, move to mark a's position'" {
         },
         else => unreachable,
     }
+    testing.expect(std.meta.activeTag(third_command) == Command.MotionOnly);
     switch (third_command) {
-        .JumpMarkPosition => |mark| testing.expectEqual(mark, 'a'),
+        .MotionOnly => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.ToMarkPosition);
+            switch (command_data.motion) {
+                .ToMarkPosition => |mark| testing.expectEqual(mark, 'a'),
+                else => unreachable,
+            }
+        },
         else => unreachable,
     }
 }
