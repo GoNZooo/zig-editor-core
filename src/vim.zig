@@ -1538,4 +1538,26 @@ test "`cs\"` = 'change surrounding double quotes" {
     }
 }
 
+test "`ds\"` = 'delete surrounding double quotes" {
+    const input = "ds\""[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expectEqual(command_data.register, null);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.Surrounding);
+            switch (command_data.motion) {
+                .Surrounding => |character| {
+                    testing.expectEqual(character, '\"');
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
 pub fn runTests() void {}
