@@ -1516,6 +1516,51 @@ test "`\"aci\"` = 'change inside double quotes and save old content to register 
     }
 }
 
+test "`\"adi\"15k\"a2p` = 'delete inside double quotes into register a, move up, paste from it'" {
+    const input = "\"adi\"15k\"a2p"[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 3);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    const second_command = command_slice[1];
+    const third_command = command_slice[2];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expectEqual(command_data.register, 'a');
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.Inside);
+            switch (command_data.motion) {
+                .Inside => |character| {
+                    testing.expectEqual(character, '\"');
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+    testing.expect(std.meta.activeTag(second_command) == Command.MotionOnly);
+    switch (second_command) {
+        .MotionOnly => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.UpwardsLines);
+            switch (command_data.motion) {
+                .UpwardsLines => |lines| {
+                    testing.expectEqual(lines, 15);
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+    testing.expect(std.meta.activeTag(third_command) == Command.PasteForwards);
+    switch (third_command) {
+        .PasteForwards => |paste_data| {
+            testing.expectEqual(paste_data.register, 'a');
+            testing.expectEqual(paste_data.range, 2);
+        },
+        else => unreachable,
+    }
+}
+
 test "`cs\"` = 'change surrounding double quotes" {
     const input = "cs\""[0..];
     const commands = try parseInput(direct_allocator, input);
