@@ -167,7 +167,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
                         try commands.append(builder_data.command);
                         state = ParseState{ .Start = CommandBuilderData{} };
                     },
-                    .MotionOnly => |*command_data| {
+                    .Yank, .Delete, .Change, .MotionOnly => |*command_data| {
                         switch (command_data.motion) {
                             .ToMarkLine, .ToMarkPosition => |*mark| {
                                 mark.* = c;
@@ -198,13 +198,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
                             },
                         }
                     },
-                    .Yank,
-                    .PasteForwards,
-                    .PasteBackwards,
-                    .Delete,
-                    .Unset,
-                    .Change,
-                    => std.debug.panic(
+                    .PasteForwards, .PasteBackwards, .Unset => std.debug.panic(
                         "Invalid command for `WaitingForMark`: {}\n",
                         builder_data.command,
                     ),
@@ -282,11 +276,15 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
                                 command_data.motion = motionFromKey(c, builder_data.*);
                                 state = ParseState{ .WaitingForTarget = builder_data.* };
                             },
+                            '`', '\'' => {
+                                command_data.motion = motionFromKey(c, builder_data.*);
+                                state = ParseState{ .WaitingForMark = builder_data.* };
+                            },
                             else => std.debug.panic("unimplemented motion: {}\n", c),
                         }
 
                         switch (state) {
-                            .WaitingForTarget => {},
+                            .WaitingForTarget, .WaitingForMark => {},
                             else => {
                                 try commands.append(builder_data.command);
                                 state = ParseState{
@@ -440,6 +438,8 @@ fn motionFromKey(character: u8, builder_data: CommandBuilderData) Motion {
         '0' => Motion.UntilColumnZero,
         'l' => Motion{ .ForwardsCharacter = builder_data.range orelse 1 },
         'h' => Motion{ .BackwardsCharacter = builder_data.range orelse 1 },
+        '`' => Motion{ .ToMarkPosition = null },
+        '\'' => Motion{ .ToMarkLine = null },
         else => std.debug.panic("unsupported motion: {}\n", character),
     };
 }
@@ -1414,6 +1414,27 @@ test "`maj`a` = 'set mark a, move one line down, move to mark a's position'" {
             testing.expect(std.meta.activeTag(command_data.motion) == Motion.ToMarkPosition);
             switch (command_data.motion) {
                 .ToMarkPosition => |mark| testing.expectEqual(mark, 'a'),
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`d`a` = 'delete until mark a's position'" {
+    const input = "d`a"[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.ToMarkPosition);
+            switch (command_data.motion) {
+                .ToMarkPosition => |mark| {
+                    testing.expectEqual(mark, 'a');
+                },
                 else => unreachable,
             }
         },
