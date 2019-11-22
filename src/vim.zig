@@ -34,6 +34,7 @@ pub const Motion = union(enum) {
     ToMarkLine: ?u8,
     ToMarkPosition: ?u8,
     Inside: ?u8,
+    Surrounding: ?u8,
 };
 
 pub const Command = union(enum) {
@@ -179,6 +180,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
                             .ForwardsCharacter,
                             .Unset,
                             .Inside,
+                            .Surrounding,
                             => {
                                 std.debug.panic(
                                     "invalid motion for `WaitingForMark`: {}\n",
@@ -207,6 +209,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
                             .ForwardsExcluding,
                             .BackwardsExcluding,
                             .Inside,
+                            .Surrounding,
                             => |*target| target.* = c,
                             .Unset,
                             .UntilEndOfWord,
@@ -262,7 +265,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
                             => {
                                 command_data.motion = motionFromKey(c, builder_data.*);
                             },
-                            'f', 'F', 't', 'T', 'i' => {
+                            'f', 'F', 't', 'T', 'i', 's' => {
                                 command_data.motion = motionFromKey(c, builder_data.*);
                                 state = ParseState{ .WaitingForTarget = builder_data.* };
                             },
@@ -431,6 +434,7 @@ fn motionFromKey(character: u8, builder_data: CommandBuilderData) Motion {
         '`' => Motion{ .ToMarkPosition = null },
         '\'' => Motion{ .ToMarkLine = null },
         'i' => Motion{ .Inside = null },
+        's' => Motion{ .Surrounding = null },
         else => std.debug.panic("unsupported motion: {}\n", character),
     };
 }
@@ -1503,6 +1507,28 @@ test "`\"aci\"` = 'change inside double quotes and save old content to register 
             testing.expect(std.meta.activeTag(command_data.motion) == Motion.Inside);
             switch (command_data.motion) {
                 .Inside => |character| {
+                    testing.expectEqual(character, '\"');
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`cs\"` = 'change surrounding double quotes" {
+    const input = "cs\""[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Change);
+    switch (first_command) {
+        .Change => |command_data| {
+            testing.expectEqual(command_data.register, null);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.Surrounding);
+            switch (command_data.motion) {
+                .Surrounding => |character| {
                     testing.expectEqual(character, '\"');
                 },
                 else => unreachable,
