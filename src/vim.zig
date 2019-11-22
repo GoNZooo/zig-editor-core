@@ -141,7 +141,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
 
                     // @TODO: add 'D' support
                     // Needs to support range + registers
-                    // Interestingly VSCodeVim does not support ranges for `D`
+                    // Interestingly VSCodeVim does not support ranges for `D` though Vim does
 
                     else => std.debug.panic(
                         "Not expecting character '{c}', waiting for command or range modifier",
