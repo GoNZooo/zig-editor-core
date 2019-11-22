@@ -1442,6 +1442,27 @@ test "`d`a` = 'delete until mark a's position'" {
     }
 }
 
+test "`d'a` = 'delete until mark a's line'" {
+    const input = "d'a"[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.ToMarkLine);
+            switch (command_data.motion) {
+                .ToMarkLine => |mark| {
+                    testing.expectEqual(mark, 'a');
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
 test "`9l22h` = 'go forward 9 characters, go back 22 characters'" {
     const input = "9l22h"[0..];
     const commands = try parseInput(direct_allocator, input);
