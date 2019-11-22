@@ -90,40 +90,27 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
                         builder_data.range_modifiers += 1;
                     },
                     'd', 'y', 'c' => {
-                        const command = commandFromKey(
+                        builder_data.command = commandFromKey(
                             c,
                             builder_data.register,
                             builder_data.range,
                         );
-                        state = ParseState{
-                            .WaitingForMotion = CommandBuilderData{
-                                .command = command,
-                                .register = builder_data.register,
-                                .range = builder_data.range,
-                            },
-                        };
+                        state = ParseState{ .WaitingForMotion = builder_data.* };
                     },
                     'm', '\'', '`' => {
-                        const command = commandFromKey(
+                        builder_data.command = commandFromKey(
                             c,
                             builder_data.register,
                             builder_data.range,
                         );
-                        state = ParseState{
-                            .WaitingForMark = CommandBuilderData{
-                                .command = command,
-                                .register = builder_data.register,
-                                .range = builder_data.range,
-                            },
-                        };
+                        state = ParseState{ .WaitingForMark = builder_data.* };
                     },
                     'p', 'P', 'j', 'k', '$', '^', '{', '}', 'l', 'h' => {
-                        const command = commandFromKey(
+                        try commands.append(commandFromKey(
                             c,
                             builder_data.register,
                             builder_data.range,
-                        );
-                        try commands.append(command);
+                        ));
                         state = ParseState{ .Start = CommandBuilderData{} };
                     },
                     'f', 'F', 't', 'T' => {
