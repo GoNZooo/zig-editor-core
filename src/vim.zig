@@ -23,6 +23,8 @@ pub const Motion = union(enum) {
     UntilColumnZero,
     DownwardsLines: u32,
     UpwardsLines: u32,
+    ForwardsCharacter: u32,
+    BackwardsCharacter: u32,
     ForwardsParagraph: u32,
     BackwardsParagraph: u32,
     ForwardsIncluding: ?u8,
@@ -115,7 +117,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
                             },
                         };
                     },
-                    'p', 'P', 'j', 'k', '$', '^', '{', '}' => {
+                    'p', 'P', 'j', 'k', '$', '^', '{', '}', 'l', 'h' => {
                         const command = commandFromKey(
                             c,
                             builder_data.register,
@@ -185,6 +187,8 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
                             .DownwardsLines,
                             .BackwardsParagraph,
                             .ForwardsParagraph,
+                            .BackwardsCharacter,
+                            .ForwardsCharacter,
                             .Unset,
                             => {
                                 std.debug.panic(
@@ -227,6 +231,8 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
                             .UpwardsLines,
                             .ForwardsParagraph,
                             .BackwardsParagraph,
+                            .ForwardsCharacter,
+                            .BackwardsCharacter,
                             .UntilEndOfLine,
                             .UntilBeginningOfLine,
                             .UntilColumnZero,
@@ -255,7 +261,21 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
                 switch (builder_data.command) {
                     .Delete, .Yank, .Change => |*command_data| {
                         switch (c) {
-                            'd', 'y', 'e', 'w', 'j', 'k', '$', '^', 'c', '{', '}', '0' => {
+                            'd',
+                            'y',
+                            'e',
+                            'w',
+                            'j',
+                            'k',
+                            '$',
+                            '^',
+                            'c',
+                            '{',
+                            '}',
+                            '0',
+                            'l',
+                            'h',
+                            => {
                                 command_data.motion = motionFromKey(c, builder_data.*);
                             },
                             'f', 'F', 't', 'T' => {
@@ -386,6 +406,18 @@ fn commandFromKey(character: u8, register: ?u8, range: ?u32) Command {
                 .register = null,
             },
         },
+        'l' => Command{
+            .MotionOnly = CommandData{
+                .motion = Motion{ .ForwardsCharacter = range orelse 1 },
+                .register = register,
+            },
+        },
+        'h' => Command{
+            .MotionOnly = CommandData{
+                .motion = Motion{ .BackwardsCharacter = range orelse 1 },
+                .register = register,
+            },
+        },
         else => std.debug.panic("unsupported command key: {}\n", character),
     };
 }
@@ -406,6 +438,8 @@ fn motionFromKey(character: u8, builder_data: CommandBuilderData) Motion {
         '}' => Motion{ .ForwardsParagraph = builder_data.range orelse 1 },
         '{' => Motion{ .BackwardsParagraph = builder_data.range orelse 1 },
         '0' => Motion.UntilColumnZero,
+        'l' => Motion{ .ForwardsCharacter = builder_data.range orelse 1 },
+        'h' => Motion{ .BackwardsCharacter = builder_data.range orelse 1 },
         else => std.debug.panic("unsupported motion: {}\n", character),
     };
 }
@@ -1380,6 +1414,42 @@ test "`maj`a` = 'set mark a, move one line down, move to mark a's position'" {
             testing.expect(std.meta.activeTag(command_data.motion) == Motion.ToMarkPosition);
             switch (command_data.motion) {
                 .ToMarkPosition => |mark| testing.expectEqual(mark, 'a'),
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`9l22h` = 'go forward 9 characters, go back 22 characters'" {
+    const input = "9l22h"[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 2);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    const second_command = command_slice[1];
+    testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
+    switch (first_command) {
+        .MotionOnly => |command_data| {
+            testing.expectEqual(command_data.register, null);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.ForwardsCharacter);
+            switch (command_data.motion) {
+                .ForwardsCharacter => |characters| {
+                    testing.expectEqual(characters, 9);
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+    switch (second_command) {
+        .MotionOnly => |command_data| {
+            testing.expectEqual(command_data.register, null);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.BackwardsCharacter);
+            switch (command_data.motion) {
+                .BackwardsCharacter => |characters| {
+                    testing.expectEqual(characters, 22);
+                },
                 else => unreachable,
             }
         },
