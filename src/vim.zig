@@ -61,6 +61,7 @@ const ParseState = union(enum) {
     WaitingForTarget: CommandBuilderData,
     WaitingForRegisterCharacter: CommandBuilderData,
     WaitingForMark: CommandBuilderData,
+    // @TODO: add possible `EmitCommand` state for when a series of characters is fully parsed?
 };
 
 pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Command) {
