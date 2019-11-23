@@ -74,6 +74,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
         },
     };
 
+    // @TODO: Split out into `fn handle(c: u8, state: ParseState) ParseState`?
     for (input) |c| {
         switch (state) {
             ParseState.Start => |*builder_data| {
