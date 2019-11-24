@@ -61,8 +61,255 @@ const ParseState = union(enum) {
     WaitingForTarget: CommandBuilderData,
     WaitingForRegisterCharacter: CommandBuilderData,
     WaitingForMark: CommandBuilderData,
-    // @TODO: add possible `EmitCommand` state for when a series of characters is fully parsed?
 };
+
+fn parseCharacter(c: u8, state: *ParseState) ?Command {
+    switch (state.*) {
+        ParseState.Start => |*builder_data| {
+            switch (c) {
+                '"' => {
+                    state.* = ParseState{ .WaitingForRegisterCharacter = builder_data.* };
+                },
+                '0'...'9' => {
+                    const numeric_value = c - '0';
+                    if (builder_data.range) |*range| {
+                        range.* *= 10;
+                        range.* += numeric_value;
+                    } else {
+                        builder_data.range = numeric_value;
+                    }
+                    builder_data.range_modifiers += 1;
+                },
+                'd', 'y', 'c' => {
+                    builder_data.command = commandFromKey(
+                        c,
+                        builder_data.register,
+                        builder_data.range,
+                    );
+                    state.* = ParseState{ .WaitingForMotion = builder_data.* };
+                },
+                'm', '\'', '`' => {
+                    builder_data.command = commandFromKey(
+                        c,
+                        builder_data.register,
+                        builder_data.range,
+                    );
+                    state.* = ParseState{ .WaitingForMark = builder_data.* };
+                },
+                'p', 'P', 'j', 'k', '$', '^', '{', '}', 'l', 'h' => {
+                    // try commands.append(commandFromKey(
+                    //     c,
+                    //     builder_data.register,
+                    //     builder_data.range,
+                    // ));
+                    const command = commandFromKey(
+                        c,
+                        builder_data.register,
+                        builder_data.range,
+                    );
+                    state.* = ParseState{ .Start = CommandBuilderData{} };
+
+                    return command;
+                },
+                'f', 'F', 't', 'T' => {
+                    builder_data.command = commandFromKey(
+                        c,
+                        builder_data.register,
+                        builder_data.range,
+                    );
+                    state.* = ParseState{ .WaitingForTarget = builder_data.* };
+
+                    return null;
+                },
+
+                // @TODO: add 'C' support
+                // Needs to support range + registers
+
+                // @TODO: add 'D' support
+                // Needs to support range + registers
+                // Interestingly VSCodeVim does not support ranges for `D` though Vim does
+
+                else => std.debug.panic(
+                    "Not expecting character '{c}', waiting for command or range modifier",
+                    c,
+                ),
+            }
+        },
+
+        ParseState.WaitingForRegisterCharacter => |*builder_data| {
+            switch (c) {
+                'a'...'z', 'A'...'Z', '+', '*' => {
+                    builder_data.register = c;
+                    state.* = ParseState{ .Start = builder_data.* };
+                },
+                else => std.debug.panic("unknown register: {}\n", c),
+            }
+        },
+
+        ParseState.WaitingForMark => |*builder_data| {
+            switch (builder_data.command) {
+                .SetMark => |*mark| {
+                    mark.* = c;
+                    const command = builder_data.command;
+                    // try commands.append(builder_data.command);
+                    state.* = ParseState{ .Start = CommandBuilderData{} };
+
+                    return command;
+                },
+                .Yank, .Delete, .Change, .MotionOnly => |*command_data| {
+                    switch (command_data.motion) {
+                        .ToMarkLine, .ToMarkPosition => |*mark| {
+                            mark.* = c;
+                            const command = builder_data.command;
+                            // try commands.append(builder_data.command);
+                            state.* = ParseState{ .Start = CommandBuilderData{} };
+
+                            return command;
+                        },
+                        .BackwardsExcluding,
+                        .BackwardsIncluding,
+                        .ForwardsIncluding,
+                        .ForwardsExcluding,
+                        .UntilBeginningOfLine,
+                        .UntilColumnZero,
+                        .UntilEndOfLine,
+                        .UntilEndOfWord,
+                        .UntilNextWord,
+                        .UpwardsLines,
+                        .DownwardsLines,
+                        .BackwardsParagraph,
+                        .ForwardsParagraph,
+                        .BackwardsCharacter,
+                        .ForwardsCharacter,
+                        .Unset,
+                        .Inside,
+                        .Surrounding,
+                        => {
+                            std.debug.panic(
+                                "invalid motion for `WaitingForMark`: {}\n",
+                                command_data.motion,
+                            );
+                        },
+                    }
+                },
+                .PasteForwards, .PasteBackwards, .Unset => std.debug.panic(
+                    "Invalid command for `WaitingForMark`: {}\n",
+                    builder_data.command,
+                ),
+            }
+        },
+
+        ParseState.WaitingForTarget => |*builder_data| {
+            switch (builder_data.command) {
+                .Delete,
+                .Yank,
+                .Change,
+                .MotionOnly,
+                => |*command_data| {
+                    switch (command_data.motion) {
+                        .ForwardsIncluding,
+                        .BackwardsIncluding,
+                        .ForwardsExcluding,
+                        .BackwardsExcluding,
+                        .Inside,
+                        .Surrounding,
+                        => |*target| target.* = c,
+                        .Unset,
+                        .UntilEndOfWord,
+                        .UntilNextWord,
+                        .DownwardsLines,
+                        .UpwardsLines,
+                        .ForwardsParagraph,
+                        .BackwardsParagraph,
+                        .ForwardsCharacter,
+                        .BackwardsCharacter,
+                        .UntilEndOfLine,
+                        .UntilBeginningOfLine,
+                        .UntilColumnZero,
+                        .ToMarkLine,
+                        .ToMarkPosition,
+                        => std.debug.panic(
+                            "non-target motion waiting for target: {}\n",
+                            command_data.motion,
+                        ),
+                    }
+                },
+                .PasteForwards,
+                .PasteBackwards,
+                .SetMark,
+                => std.debug.panic(
+                    "invalid command for `WaitingForTarget`: {}\n",
+                    builder_data.command,
+                ),
+                .Unset => std.debug.panic("no command set when waiting for target"),
+            }
+            // try commands.append(builder_data.command);
+            const command = builder_data.command;
+            state.* = ParseState{ .Start = CommandBuilderData{} };
+
+            return command;
+        },
+
+        ParseState.WaitingForMotion => |*builder_data| {
+            switch (builder_data.command) {
+                .Delete, .Yank, .Change => |*command_data| {
+                    switch (c) {
+                        'd',
+                        'y',
+                        'e',
+                        'w',
+                        'j',
+                        'k',
+                        '$',
+                        '^',
+                        'c',
+                        '{',
+                        '}',
+                        '0',
+                        'l',
+                        'h',
+                        => {
+                            command_data.motion = motionFromKey(c, builder_data.*);
+                        },
+                        'f', 'F', 't', 'T', 'i', 's' => {
+                            command_data.motion = motionFromKey(c, builder_data.*);
+                            state.* = ParseState{ .WaitingForTarget = builder_data.* };
+                        },
+                        '`', '\'' => {
+                            command_data.motion = motionFromKey(c, builder_data.*);
+                            state.* = ParseState{ .WaitingForMark = builder_data.* };
+                        },
+                        else => std.debug.panic("unimplemented motion: {}\n", c),
+                    }
+
+                    switch (state.*) {
+                        .WaitingForTarget, .WaitingForMark => {},
+                        else => {
+                            // try commands.append(builder_data.command);
+                            const command = builder_data.command;
+                            state.* = ParseState{
+                                .Start = CommandBuilderData{},
+                            };
+
+                            return command;
+                        },
+                    }
+                },
+                .PasteForwards,
+                .PasteBackwards,
+                .MotionOnly,
+                .SetMark,
+                => std.debug.panic(
+                    "invalid command for `WaitingForMotion`: {}\n",
+                    builder_data.command,
+                ),
+                .Unset => std.debug.panic("no command when waiting for motion"),
+            }
+        },
+    }
+
+    return null;
+}
 
 pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Command) {
     var commands = ArrayList(Command).init(allocator);
@@ -75,231 +322,10 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
         },
     };
 
-    // @TODO: Split out into `fn parseCharacter(c: u8, state: ParseState) ParseState`?
     for (input) |c| {
-        switch (state) {
-            ParseState.Start => |*builder_data| {
-                switch (c) {
-                    '"' => {
-                        state = ParseState{ .WaitingForRegisterCharacter = builder_data.* };
-                    },
-                    '0'...'9' => {
-                        const numeric_value = c - '0';
-                        if (builder_data.range) |*range| {
-                            range.* *= 10;
-                            range.* += numeric_value;
-                        } else {
-                            builder_data.range = numeric_value;
-                        }
-                        builder_data.range_modifiers += 1;
-                    },
-                    'd', 'y', 'c' => {
-                        builder_data.command = commandFromKey(
-                            c,
-                            builder_data.register,
-                            builder_data.range,
-                        );
-                        state = ParseState{ .WaitingForMotion = builder_data.* };
-                    },
-                    'm', '\'', '`' => {
-                        builder_data.command = commandFromKey(
-                            c,
-                            builder_data.register,
-                            builder_data.range,
-                        );
-                        state = ParseState{ .WaitingForMark = builder_data.* };
-                    },
-                    'p', 'P', 'j', 'k', '$', '^', '{', '}', 'l', 'h' => {
-                        try commands.append(commandFromKey(
-                            c,
-                            builder_data.register,
-                            builder_data.range,
-                        ));
-                        state = ParseState{ .Start = CommandBuilderData{} };
-                    },
-                    'f', 'F', 't', 'T' => {
-                        builder_data.command = commandFromKey(
-                            c,
-                            builder_data.register,
-                            builder_data.range,
-                        );
-
-                        state = ParseState{ .WaitingForTarget = builder_data.* };
-                    },
-
-                    // @TODO: add 'C' support
-                    // Needs to support range + registers
-
-                    // @TODO: add 'D' support
-                    // Needs to support range + registers
-                    // Interestingly VSCodeVim does not support ranges for `D` though Vim does
-
-                    else => std.debug.panic(
-                        "Not expecting character '{c}', waiting for command or range modifier",
-                        c,
-                    ),
-                }
-            },
-
-            ParseState.WaitingForRegisterCharacter => |*builder_data| {
-                switch (c) {
-                    'a'...'z', 'A'...'Z', '+', '*' => {
-                        builder_data.register = c;
-                        state = ParseState{ .Start = builder_data.* };
-                    },
-                    else => std.debug.panic("unknown register: {}\n", c),
-                }
-            },
-
-            ParseState.WaitingForMark => |*builder_data| {
-                switch (builder_data.command) {
-                    .SetMark => |*mark| {
-                        mark.* = c;
-                        try commands.append(builder_data.command);
-                        state = ParseState{ .Start = CommandBuilderData{} };
-                    },
-                    .Yank, .Delete, .Change, .MotionOnly => |*command_data| {
-                        switch (command_data.motion) {
-                            .ToMarkLine, .ToMarkPosition => |*mark| {
-                                mark.* = c;
-                                try commands.append(builder_data.command);
-                                state = ParseState{ .Start = CommandBuilderData{} };
-                            },
-                            .BackwardsExcluding,
-                            .BackwardsIncluding,
-                            .ForwardsIncluding,
-                            .ForwardsExcluding,
-                            .UntilBeginningOfLine,
-                            .UntilColumnZero,
-                            .UntilEndOfLine,
-                            .UntilEndOfWord,
-                            .UntilNextWord,
-                            .UpwardsLines,
-                            .DownwardsLines,
-                            .BackwardsParagraph,
-                            .ForwardsParagraph,
-                            .BackwardsCharacter,
-                            .ForwardsCharacter,
-                            .Unset,
-                            .Inside,
-                            .Surrounding,
-                            => {
-                                std.debug.panic(
-                                    "invalid motion for `WaitingForMark`: {}\n",
-                                    command_data.motion,
-                                );
-                            },
-                        }
-                    },
-                    .PasteForwards, .PasteBackwards, .Unset => std.debug.panic(
-                        "Invalid command for `WaitingForMark`: {}\n",
-                        builder_data.command,
-                    ),
-                }
-            },
-
-            ParseState.WaitingForTarget => |*builder_data| {
-                switch (builder_data.command) {
-                    .Delete,
-                    .Yank,
-                    .Change,
-                    .MotionOnly,
-                    => |*command_data| {
-                        switch (command_data.motion) {
-                            .ForwardsIncluding,
-                            .BackwardsIncluding,
-                            .ForwardsExcluding,
-                            .BackwardsExcluding,
-                            .Inside,
-                            .Surrounding,
-                            => |*target| target.* = c,
-                            .Unset,
-                            .UntilEndOfWord,
-                            .UntilNextWord,
-                            .DownwardsLines,
-                            .UpwardsLines,
-                            .ForwardsParagraph,
-                            .BackwardsParagraph,
-                            .ForwardsCharacter,
-                            .BackwardsCharacter,
-                            .UntilEndOfLine,
-                            .UntilBeginningOfLine,
-                            .UntilColumnZero,
-                            .ToMarkLine,
-                            .ToMarkPosition,
-                            => std.debug.panic(
-                                "non-target motion waiting for target: {}\n",
-                                command_data.motion,
-                            ),
-                        }
-                    },
-                    .PasteForwards,
-                    .PasteBackwards,
-                    .SetMark,
-                    => std.debug.panic(
-                        "invalid command for `WaitingForTarget`: {}\n",
-                        builder_data.command,
-                    ),
-                    .Unset => std.debug.panic("no command set when waiting for target"),
-                }
-                try commands.append(builder_data.command);
-                state = ParseState{ .Start = CommandBuilderData{} };
-            },
-
-            ParseState.WaitingForMotion => |*builder_data| {
-                switch (builder_data.command) {
-                    .Delete, .Yank, .Change => |*command_data| {
-                        switch (c) {
-                            'd',
-                            'y',
-                            'e',
-                            'w',
-                            'j',
-                            'k',
-                            '$',
-                            '^',
-                            'c',
-                            '{',
-                            '}',
-                            '0',
-                            'l',
-                            'h',
-                            => {
-                                command_data.motion = motionFromKey(c, builder_data.*);
-                            },
-                            'f', 'F', 't', 'T', 'i', 's' => {
-                                command_data.motion = motionFromKey(c, builder_data.*);
-                                state = ParseState{ .WaitingForTarget = builder_data.* };
-                            },
-                            '`', '\'' => {
-                                command_data.motion = motionFromKey(c, builder_data.*);
-                                state = ParseState{ .WaitingForMark = builder_data.* };
-                            },
-                            else => std.debug.panic("unimplemented motion: {}\n", c),
-                        }
-
-                        switch (state) {
-                            .WaitingForTarget, .WaitingForMark => {},
-                            else => {
-                                try commands.append(builder_data.command);
-                                state = ParseState{
-                                    .Start = CommandBuilderData{},
-                                };
-                            },
-                        }
-                    },
-                    .PasteForwards,
-                    .PasteBackwards,
-                    .MotionOnly,
-                    .SetMark,
-                    => std.debug.panic(
-                        "invalid command for `WaitingForMotion`: {}\n",
-                        builder_data.command,
-                    ),
-                    .Unset => std.debug.panic("no command when waiting for motion"),
-                }
-            },
-        }
+        if (parseCharacter(c, &state)) |command| {
+            try commands.append(command);
+        } else {}
     }
 
     return commands;
