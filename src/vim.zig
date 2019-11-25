@@ -113,8 +113,6 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         builder_data.range,
                     );
                     state.* = ParseState{ .WaitingForTarget = builder_data.* };
-
-                    return null;
                 },
 
                 // @TODO: add 'C' support
