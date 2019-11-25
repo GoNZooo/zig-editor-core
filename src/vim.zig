@@ -97,11 +97,6 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                     state.* = ParseState{ .WaitingForMark = builder_data.* };
                 },
                 'p', 'P', 'j', 'k', '$', '^', '{', '}', 'l', 'h' => {
-                    // try commands.append(commandFromKey(
-                    //     c,
-                    //     builder_data.register,
-                    //     builder_data.range,
-                    // ));
                     const command = commandFromKey(
                         c,
                         builder_data.register,
@@ -151,7 +146,6 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                 .SetMark => |*mark| {
                     mark.* = c;
                     const command = builder_data.command;
-                    // try commands.append(builder_data.command);
                     state.* = ParseState{ .Start = CommandBuilderData{} };
 
                     return command;
@@ -161,7 +155,6 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         .ToMarkLine, .ToMarkPosition => |*mark| {
                             mark.* = c;
                             const command = builder_data.command;
-                            // try commands.append(builder_data.command);
                             state.* = ParseState{ .Start = CommandBuilderData{} };
 
                             return command;
@@ -243,7 +236,6 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                 ),
                 .Unset => std.debug.panic("no command set when waiting for target"),
             }
-            // try commands.append(builder_data.command);
             const command = builder_data.command;
             state.* = ParseState{ .Start = CommandBuilderData{} };
 
@@ -285,7 +277,6 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                     switch (state.*) {
                         .WaitingForTarget, .WaitingForMark => {},
                         else => {
-                            // try commands.append(builder_data.command);
                             const command = builder_data.command;
                             state.* = ParseState{
                                 .Start = CommandBuilderData{},
