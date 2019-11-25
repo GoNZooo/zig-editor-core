@@ -456,17 +456,6 @@ fn motionFromKey(character: u8, builder_data: CommandBuilderData) Motion {
     };
 }
 
-test "can get active tag of command" {
-    const command = Command{ .Delete = CommandData{ .motion = Motion.Unset, .register = null } };
-    testing.expect(std.meta.activeTag(command) == Command.Delete);
-    switch (command) {
-        .Delete => |command_data| {
-            testing.expect(std.meta.activeTag(command_data.motion) == Motion.Unset);
-        },
-        else => unreachable,
-    }
-}
-
 test "`dd` creates a delete command" {
     const input = "dd"[0..];
     const commands = try parseInput(direct_allocator, input);
