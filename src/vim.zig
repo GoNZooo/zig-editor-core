@@ -316,7 +316,7 @@ pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Comma
     for (input) |c| {
         if (parseCharacter(c, &state)) |command| {
             try commands.append(command);
-        } else {}
+        }
     }
 
     return commands;
