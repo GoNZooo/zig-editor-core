@@ -21,6 +21,7 @@ pub const Motion = union(enum) {
     UntilEndOfLine: u32,
     UntilBeginningOfLine: u32,
     UntilColumnZero,
+    UntilEndOfFile: u32,
     DownwardsLines: u32,
     UpwardsLines: u32,
     ForwardsCharacter: u32,
@@ -96,7 +97,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                     );
                     state.* = ParseState{ .WaitingForMark = builder_data.* };
                 },
-                'p', 'P', 'j', 'k', '$', '^', '{', '}', 'l', 'h' => {
+                'p', 'P', 'j', 'k', '$', '^', '{', '}', 'l', 'h', 'G' => {
                     const command = commandFromKey(
                         c,
                         builder_data.register,
@@ -175,6 +176,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         .Unset,
                         .Inside,
                         .Surrounding,
+                        .UntilEndOfFile,
                         => {
                             std.debug.panic(
                                 "invalid motion for `WaitingForMark`: {}\n",
@@ -244,6 +246,18 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
             switch (builder_data.command) {
                 .Delete, .Yank, .Change => |*command_data| {
                     switch (c) {
+                        '1'...'9' => {
+                            const numeric_value = c - '0';
+                            if (builder_data.range) |*range| {
+                                range.* *= 10;
+                                range.* += numeric_value;
+                            } else {
+                                builder_data.range = numeric_value;
+                            }
+                            builder_data.range_modifiers += 1;
+
+                            return null;
+                        },
                         'd',
                         'y',
                         'e',
@@ -258,6 +272,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         '0',
                         'l',
                         'h',
+                        'G',
                         => {
                             command_data.motion = motionFromKey(c, builder_data.*);
                         },
@@ -426,6 +441,12 @@ fn commandFromKey(character: u8, register: ?u8, range: ?u32) Command {
                 .register = register,
             },
         },
+        'G' => Command{
+            .MotionOnly = CommandData{
+                .motion = Motion{ .UntilEndOfFile = range orelse 0 },
+                .register = register,
+            },
+        },
         else => std.debug.panic("unsupported command key: {}\n", character),
     };
 }
@@ -452,6 +473,7 @@ fn motionFromKey(character: u8, builder_data: CommandBuilderData) Motion {
         '\'' => Motion{ .ToMarkLine = null },
         'i' => Motion{ .Inside = null },
         's' => Motion{ .Surrounding = null },
+        'G' => Motion{ .UntilEndOfFile = builder_data.range orelse 0 },
         else => std.debug.panic("unsupported motion: {}\n", character),
     };
 }
@@ -1603,6 +1625,116 @@ test "`ds\"` = 'delete surrounding double quotes" {
             switch (command_data.motion) {
                 .Surrounding => |character| {
                     testing.expectEqual(character, '\"');
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`dG` = 'delete until end of file'" {
+    const input = "dG"[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expectEqual(command_data.register, null);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.UntilEndOfFile);
+            switch (command_data.motion) {
+                .UntilEndOfFile => |line_number| {
+                    testing.expectEqual(line_number, 0);
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`G` = 'go to end of file'" {
+    const input = "G"[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
+    switch (first_command) {
+        .MotionOnly => |command_data| {
+            testing.expectEqual(command_data.register, null);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.UntilEndOfFile);
+            switch (command_data.motion) {
+                .UntilEndOfFile => |line_number| {
+                    testing.expectEqual(line_number, 0);
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`15G` = 'go to end of file'" {
+    const input = "15G"[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
+    switch (first_command) {
+        .MotionOnly => |command_data| {
+            testing.expectEqual(command_data.register, null);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.UntilEndOfFile);
+            switch (command_data.motion) {
+                .UntilEndOfFile => |line_number| {
+                    testing.expectEqual(line_number, 15);
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`\"ad15G` = 'delete until line 15 of file into register a'" {
+    const input = "\"ad15G"[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Delete);
+    switch (first_command) {
+        .Delete => |command_data| {
+            testing.expectEqual(command_data.register, 'a');
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.UntilEndOfFile);
+            switch (command_data.motion) {
+                .UntilEndOfFile => |line_number| {
+                    testing.expectEqual(line_number, 15);
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`d15G` = 'go to end of file'" {
+    const input = "15G"[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
+    switch (first_command) {
+        .MotionOnly => |command_data| {
+            testing.expectEqual(command_data.register, null);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.UntilEndOfFile);
+            switch (command_data.motion) {
+                .UntilEndOfFile => |line_number| {
+                    testing.expectEqual(line_number, 15);
                 },
                 else => unreachable,
             }
