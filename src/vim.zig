@@ -70,6 +70,8 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
             switch (c) {
                 '"' => {
                     state.* = ParseState{ .WaitingForRegisterCharacter = builder_data.* };
+
+                    return null;
                 },
                 '0'...'9' => {
                     const numeric_value = c - '0';
@@ -80,6 +82,8 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         builder_data.range = numeric_value;
                     }
                     builder_data.range_modifiers += 1;
+
+                    return null;
                 },
                 'd', 'y', 'c' => {
                     builder_data.command = commandFromKey(
@@ -88,6 +92,8 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         builder_data.range,
                     );
                     state.* = ParseState{ .WaitingForMotion = builder_data.* };
+
+                    return null;
                 },
                 'm', '\'', '`' => {
                     builder_data.command = commandFromKey(
@@ -96,6 +102,8 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         builder_data.range,
                     );
                     state.* = ParseState{ .WaitingForMark = builder_data.* };
+
+                    return null;
                 },
                 'p', 'P', 'j', 'k', '$', '^', '{', '}', 'l', 'h', 'G' => {
                     const command = commandFromKey(
@@ -114,6 +122,8 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         builder_data.range,
                     );
                     state.* = ParseState{ .WaitingForTarget = builder_data.* };
+
+                    return null;
                 },
 
                 // @TODO: add 'C' support
@@ -135,6 +145,8 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                 'a'...'z', 'A'...'Z', '+', '*' => {
                     builder_data.register = c;
                     state.* = ParseState{ .Start = builder_data.* };
+
+                    return null;
                 },
                 else => std.debug.panic("unknown register: {}\n", c),
             }
@@ -206,7 +218,13 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         .BackwardsExcluding,
                         .Inside,
                         .Surrounding,
-                        => |*target| target.* = c,
+                        => |*target| {
+                            target.* = c;
+                            const command = builder_data.command;
+                            state.* = ParseState{ .Start = CommandBuilderData{} };
+
+                            return command;
+                        },
                         .Unset,
                         .UntilEndOfWord,
                         .UntilNextWord,
@@ -221,6 +239,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         .UntilColumnZero,
                         .ToMarkLine,
                         .ToMarkPosition,
+                        .UntilEndOfFile,
                         => std.debug.panic(
                             "non-target motion waiting for target: {}\n",
                             command_data.motion,
@@ -236,10 +255,6 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                 ),
                 .Unset => std.debug.panic("no command set when waiting for target"),
             }
-            const command = builder_data.command;
-            state.* = ParseState{ .Start = CommandBuilderData{} };
-
-            return command;
         },
 
         ParseState.WaitingForMotion => |*builder_data| {
@@ -275,28 +290,24 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         'G',
                         => {
                             command_data.motion = motionFromKey(c, builder_data.*);
+                            const command = builder_data.command;
+                            state.* = ParseState{ .Start = CommandBuilderData{} };
+
+                            return command;
                         },
                         'f', 'F', 't', 'T', 'i', 's' => {
                             command_data.motion = motionFromKey(c, builder_data.*);
                             state.* = ParseState{ .WaitingForTarget = builder_data.* };
+
+                            return null;
                         },
                         '`', '\'' => {
                             command_data.motion = motionFromKey(c, builder_data.*);
                             state.* = ParseState{ .WaitingForMark = builder_data.* };
-                        },
-                        else => std.debug.panic("unimplemented motion: {}\n", c),
-                    }
 
-                    switch (state.*) {
-                        .WaitingForTarget, .WaitingForMark => {},
-                        else => {
-                            const command = builder_data.command;
-                            state.* = ParseState{
-                                .Start = CommandBuilderData{},
-                            };
-
-                            return command;
+                            return null;
                         },
+                        else => std.debug.panic("unimplemented motion: {c}\n", c),
                     }
                 },
                 .PasteForwards,
@@ -311,8 +322,6 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
             }
         },
     }
-
-    return null;
 }
 
 pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Command) {
