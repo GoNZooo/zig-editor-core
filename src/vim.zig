@@ -48,6 +48,7 @@ pub const Command = union(enum) {
     PasteForwards: PasteData,
     PasteBackwards: PasteData,
     SetMark: ?u8,
+    // @TODO: add `gc`; `Comment`
 };
 
 const CommandBuilderData = struct {
