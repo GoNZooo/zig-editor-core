@@ -37,6 +37,7 @@ pub const Motion = union(enum) {
     ToMarkPosition: ?u8,
     Inside: ?u8,
     Surrounding: ?u8,
+    ToMatching,
 };
 
 pub const Command = union(enum) {
@@ -198,6 +199,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         .Surrounding,
                         .UntilEndOfFile,
                         .UntilBeginningOfFile,
+                        .ToMatching,
                         => {
                             std.debug.panic(
                                 "invalid motion for `WaitingForMark`: {}\n",
@@ -251,6 +253,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         .ToMarkPosition,
                         .UntilEndOfFile,
                         .UntilBeginningOfFile,
+                        .ToMatching,
                         => std.debug.panic(
                             "non-target motion waiting for target: {}\n",
                             command_data.motion,
@@ -311,6 +314,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         'l',
                         'h',
                         'G',
+                        '%',
                         => {
                             command_data.motion = motionFromKey(c, builder_data.*);
                             const command = builder_data.command;
@@ -515,6 +519,7 @@ fn motionFromKey(character: u8, builder_data: CommandBuilderData) Motion {
         'i' => Motion{ .Inside = null },
         's' => Motion{ .Surrounding = null },
         'G' => Motion{ .UntilEndOfFile = builder_data.range orelse 0 },
+        '%' => Motion.ToMatching,
         else => std.debug.panic("unsupported motion: {c}\n", character),
     };
 }
@@ -1977,6 +1982,21 @@ test "`20gcj` = 'comment downwards 20 lines'" {
                 },
                 else => unreachable,
             }
+        },
+        else => unreachable,
+    }
+}
+
+test "`gc%` = 'comment until matching token'" {
+    const input = "gc%"[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Comment);
+    switch (first_command) {
+        .Comment => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.ToMatching);
         },
         else => unreachable,
     }
