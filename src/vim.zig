@@ -362,6 +362,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
 
 pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Command) {
     var commands = ArrayList(Command).init(allocator);
+    errdefer commands.deinit();
     var state: ParseState = ParseState{
         .Start = CommandBuilderData{
             .range = null,
