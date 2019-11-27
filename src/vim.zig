@@ -48,7 +48,7 @@ pub const Command = union(enum) {
     PasteForwards: PasteData,
     PasteBackwards: PasteData,
     SetMark: ?u8,
-    // @TODO: add `gc`; `Comment`
+    Comment: CommandData,
 };
 
 const CommandBuilderData = struct {
@@ -169,7 +169,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
 
                     return command;
                 },
-                .Yank, .Delete, .Change, .MotionOnly => |*command_data| {
+                .Yank, .Delete, .Change, .MotionOnly, .Comment => |*command_data| {
                     switch (command_data.motion) {
                         .ToMarkLine, .ToMarkPosition => |*mark| {
                             mark.* = c;
@@ -219,6 +219,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                 .Yank,
                 .Change,
                 .MotionOnly,
+                .Comment,
                 => |*command_data| {
                     switch (command_data.motion) {
                         .ForwardsIncluding,
@@ -269,7 +270,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
 
         ParseState.WaitingForMotion => |*builder_data| {
             switch (builder_data.command) {
-                .Delete, .Yank, .Change => |*command_data| {
+                .Delete, .Yank, .Change, .Comment => |*command_data| {
                     switch (c) {
                         '1'...'9' => {
                             const numeric_value = c - '0';
@@ -283,6 +284,19 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
 
                             return null;
                         },
+                        '0' => {
+                            if (builder_data.range) |*range| {
+                                range.* *= 10;
+
+                                return null;
+                            } else {
+                                command_data.motion = motionFromKey(c, builder_data.*);
+                                const command = builder_data.command;
+                                state.* = ParseState{ .Start = CommandBuilderData{} };
+
+                                return command;
+                            }
+                        },
                         'd',
                         'y',
                         'e',
@@ -294,7 +308,6 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         'c',
                         '{',
                         '}',
-                        '0',
                         'l',
                         'h',
                         'G',
@@ -338,11 +351,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
         },
 
         ParseState.WaitingForGCommand => |*builder_data| {
-            const command = gCommandFromKey(c, builder_data.*);
-
-            state.* = ParseState{ .Start = CommandBuilderData{} };
-
-            return command;
+            return gCommandFromKey(c, state);
         },
     }
 }
@@ -510,33 +519,49 @@ fn motionFromKey(character: u8, builder_data: CommandBuilderData) Motion {
     };
 }
 
-fn gCommandFromKey(character: u8, builder_data: CommandBuilderData) Command {
-    return switch (character) {
-        'g' => g: {
-            switch (builder_data.command) {
-                .Delete, .Yank, .Change => |*command_data| {
-                    command_data.motion = Motion{
-                        .UntilBeginningOfFile = builder_data.range orelse 0,
-                    };
-                },
-                .Unset => {
-                    builder_data.command = Command{
-                        .MotionOnly = CommandData{
-                            .motion = Motion{
+fn gCommandFromKey(character: u8, state: *ParseState) ?Command {
+    return switch (state.*) {
+        .WaitingForGCommand => |*builder_data| outer: {
+            switch (character) {
+                'g' => {
+                    switch (builder_data.command) {
+                        .Delete, .Yank, .Change, .Comment => |*command_data| {
+                            command_data.motion = Motion{
                                 .UntilBeginningOfFile = builder_data.range orelse 0,
-                            },
-                            .register = builder_data.register,
+                            };
+                        },
+                        .Unset => {
+                            builder_data.command = Command{
+                                .MotionOnly = CommandData{
+                                    .motion = Motion{
+                                        .UntilBeginningOfFile = builder_data.range orelse 0,
+                                    },
+                                    .register = builder_data.register,
+                                },
+                            };
+                        },
+                        .MotionOnly, .SetMark, .PasteForwards, .PasteBackwards => {
+                            std.debug.panic("invalid g command state: {}\n", builder_data.command);
+                        },
+                    }
+
+                    break :outer builder_data.command;
+                },
+                'c' => {
+                    builder_data.command = Command{
+                        .Comment = CommandData{
+                            .motion = Motion.Unset,
+                            .register = null,
                         },
                     };
-                },
-                .MotionOnly, .SetMark, .PasteForwards, .PasteBackwards => {
-                    std.debug.panic("invalid g command state: {}\n", builder_data.command);
-                },
-            }
+                    state.* = ParseState{ .WaitingForMotion = builder_data.* };
 
-            break :g builder_data.command;
+                    break :outer null;
+                },
+                else => std.debug.panic("unsupported G command: {c}\n", character),
+            }
         },
-        else => std.debug.panic("unsupported G command: {c}\n", character),
+        else => unreachable,
     };
 }
 
@@ -1907,6 +1932,48 @@ test "`d15gg` = 'delete until line 15 of file'" {
             switch (command_data.motion) {
                 .UntilBeginningOfFile => |line_number| {
                     testing.expectEqual(line_number, 15);
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`gc20j` = 'comment downwards 20 lines'" {
+    const input = "gc20j"[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Comment);
+    switch (first_command) {
+        .Comment => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.DownwardsLines);
+            switch (command_data.motion) {
+                .DownwardsLines => |line_number| {
+                    testing.expectEqual(line_number, 20);
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
+test "`20gcj` = 'comment downwards 20 lines'" {
+    const input = "20gcj"[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Comment);
+    switch (first_command) {
+        .Comment => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.DownwardsLines);
+            switch (command_data.motion) {
+                .DownwardsLines => |line_number| {
+                    testing.expectEqual(line_number, 20);
                 },
                 else => unreachable,
             }
