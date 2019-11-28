@@ -52,6 +52,8 @@ pub const Command = union(enum) {
     Comment: CommandData,
     BringLineUp: u32,
     Undo,
+    // @TODO: add EnterInsertMode
+    // @TODO: add ExitInsertMode
 };
 
 const CommandBuilderData = struct {
@@ -63,6 +65,7 @@ const CommandBuilderData = struct {
 
 const ParseState = union(enum) {
     Start: CommandBuilderData,
+    // @TODO: add `InInsertMode: CommandBuilderData`
     WaitingForMotion: CommandBuilderData,
     WaitingForTarget: CommandBuilderData,
     WaitingForRegisterCharacter: CommandBuilderData,
@@ -2055,5 +2058,7 @@ test "`u` = 'undo'" {
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Undo);
 }
+
+// @TODO: add test for `i` & `<escape>`
 
 pub fn runTests() void {}
