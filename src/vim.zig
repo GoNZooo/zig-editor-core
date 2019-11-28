@@ -51,6 +51,7 @@ pub const Command = union(enum) {
     SetMark: ?u8,
     Comment: CommandData,
     BringLineUp: u32,
+    Undo,
 };
 
 const CommandBuilderData = struct {
@@ -110,7 +111,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
 
                     return null;
                 },
-                'p', 'P', 'j', 'k', '$', '^', '{', '}', 'l', 'h', 'G', 'J' => {
+                'p', 'P', 'j', 'k', '$', '^', '{', '}', 'l', 'h', 'G', 'J', 'u' => {
                     const command = commandFromKey(
                         c,
                         builder_data.register,
@@ -209,7 +210,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         },
                     }
                 },
-                .PasteForwards, .PasteBackwards, .Unset, .BringLineUp => std.debug.panic(
+                .PasteForwards, .PasteBackwards, .Unset, .BringLineUp, .Undo => std.debug.panic(
                     "Invalid command for `WaitingForMark`: {}\n",
                     builder_data.command,
                 ),
@@ -265,6 +266,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                 .PasteBackwards,
                 .SetMark,
                 .BringLineUp,
+                .Undo,
                 => std.debug.panic(
                     "invalid command for `WaitingForTarget`: {}\n",
                     builder_data.command,
@@ -349,6 +351,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                 .MotionOnly,
                 .SetMark,
                 .BringLineUp,
+                .Undo,
                 => std.debug.panic(
                     "invalid command for `WaitingForMotion`: {}\n",
                     builder_data.command,
@@ -497,6 +500,7 @@ fn commandFromKey(character: u8, register: ?u8, range: ?u32) Command {
             },
         },
         'J' => Command{ .BringLineUp = range orelse 1 },
+        'u' => Command.Undo,
         else => std.debug.panic("unsupported command key: {}\n", character),
     };
 }
@@ -550,7 +554,13 @@ fn gCommandFromKey(character: u8, state: *ParseState) ?Command {
                                 },
                             };
                         },
-                        .MotionOnly, .SetMark, .PasteForwards, .PasteBackwards, .BringLineUp => {
+                        .MotionOnly,
+                        .SetMark,
+                        .PasteForwards,
+                        .PasteBackwards,
+                        .BringLineUp,
+                        .Undo,
+                        => {
                             std.debug.panic("invalid g command state: {}\n", builder_data.command);
                         },
                     }
@@ -2035,6 +2045,15 @@ test "`25J` = 'bring line up'" {
         },
         else => unreachable,
     }
+}
+
+test "`u` = 'undo'" {
+    const input = "u"[0..];
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.Undo);
 }
 
 pub fn runTests() void {}
