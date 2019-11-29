@@ -2144,6 +2144,33 @@ test "`iC-[` = 'enter insert mode, then exit it'" {
     }
 }
 
+test "`igaf%C-[` = 'enter insert mode, then exit it'" {
+    const input = "igaf%\x1b";
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 6);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.EnterInsertMode);
+    switch (first_command) {
+        .EnterInsertMode => |range| {
+            testing.expectEqual(range, 1);
+        },
+        else => unreachable,
+    }
+    const insert_commands = command_slice[1..(command_slice.len - 1)];
+    for (insert_commands) |ic, index| {
+        testing.expect(std.meta.activeTag(ic) == Command.Insert);
+        switch (ic) {
+            .Insert => |insert_data| {
+                testing.expectEqual(insert_data.character, input[index + 1]);
+            },
+            else => unreachable,
+        }
+    }
+    const last_command = command_slice[5];
+    testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
+}
+
 pub fn runTests() void {}
 
-const ESCAPE_KEY = 27;
+const ESCAPE_KEY = '\x1b';
