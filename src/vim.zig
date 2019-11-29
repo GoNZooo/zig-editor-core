@@ -53,7 +53,8 @@ pub const Command = union(enum) {
     BringLineUp: u32,
     Undo,
     EnterInsertMode: u32,
-    // @TODO: add ExitInsertMode
+    Insert: InsertData,
+    ExitInsertMode,
 };
 
 const CommandBuilderData = struct {
@@ -63,9 +64,19 @@ const CommandBuilderData = struct {
     command: Command = Command.Unset,
 };
 
+const InsertModeData = struct {
+    range: ?u32 = null,
+    range_modifiers: u32 = 0,
+};
+
+const InsertData = struct {
+    character: u8,
+    range: u32,
+};
+
 const State = union(enum) {
     Start: CommandBuilderData,
-    // @TODO: add `InInsertMode: CommandBuilderData`
+    InInsertMode: InsertModeData,
     WaitingForMotion: CommandBuilderData,
     WaitingForTarget: CommandBuilderData,
     WaitingForRegisterCharacter: CommandBuilderData,
@@ -114,7 +125,7 @@ fn parseCharacter(c: u8, state: *State) ?Command {
 
                     return null;
                 },
-                'p', 'P', 'j', 'k', '$', '^', '{', '}', 'l', 'h', 'G', 'J', 'u', 'i' => {
+                'p', 'P', 'j', 'k', '$', '^', '{', '}', 'l', 'h', 'G', 'J', 'u' => {
                     const command = commandFromKey(
                         c,
                         builder_data.register,
@@ -138,6 +149,12 @@ fn parseCharacter(c: u8, state: *State) ?Command {
                     state.* = State{ .WaitingForGCommand = builder_data.* };
 
                     return null;
+                },
+                'i' => {
+                    const command = commandFromKey(c, null, builder_data.range);
+                    state.* = State{ .InInsertMode = InsertModeData{} };
+
+                    return command;
                 },
 
                 // @TODO: add 'C' support
@@ -219,6 +236,8 @@ fn parseCharacter(c: u8, state: *State) ?Command {
                 .BringLineUp,
                 .Undo,
                 .EnterInsertMode,
+                .Insert,
+                .ExitInsertMode,
                 => std.debug.panic(
                     "Invalid command for `WaitingForMark`: {}\n",
                     builder_data.command,
@@ -277,6 +296,8 @@ fn parseCharacter(c: u8, state: *State) ?Command {
                 .BringLineUp,
                 .Undo,
                 .EnterInsertMode,
+                .Insert,
+                .ExitInsertMode,
                 => std.debug.panic(
                     "invalid command for `WaitingForTarget`: {}\n",
                     builder_data.command,
@@ -363,6 +384,8 @@ fn parseCharacter(c: u8, state: *State) ?Command {
                 .BringLineUp,
                 .Undo,
                 .EnterInsertMode,
+                .Insert,
+                .ExitInsertMode,
                 => std.debug.panic(
                     "invalid command for `WaitingForMotion`: {}\n",
                     builder_data.command,
@@ -373,6 +396,25 @@ fn parseCharacter(c: u8, state: *State) ?Command {
 
         State.WaitingForGCommand => |*builder_data| {
             return gCommandFromKey(c, state);
+        },
+
+        State.InInsertMode => |*insert_mode_data| {
+            return switch (c) {
+                ESCAPE_KEY => i: {
+                    const command: Command = Command.ExitInsertMode;
+                    state.* = State{ .Start = CommandBuilderData{} };
+
+                    break :i command;
+                },
+                else => |character| i: {
+                    break :i Command{
+                        .Insert = InsertData{
+                            .character = character,
+                            .range = insert_mode_data.range orelse 1,
+                        },
+                    };
+                },
+            };
         },
     }
 }
@@ -573,6 +615,8 @@ fn gCommandFromKey(character: u8, state: *State) ?Command {
                         .BringLineUp,
                         .Undo,
                         .EnterInsertMode,
+                        .Insert,
+                        .ExitInsertMode,
                         => {
                             std.debug.panic("invalid g command state: {}\n", builder_data.command);
                         },
@@ -2069,14 +2113,37 @@ test "`u` = 'undo'" {
     testing.expect(std.meta.activeTag(first_command) == Command.Undo);
 }
 
-// @TODO: add test for `i` & `<escape>`
-test "`i` = 'enter insert mode'" {
-    const input = "i"[0..];
-    const commands = try parseInput(direct_allocator, input);
-    testing.expectEqual(commands.count(), 1);
-    const command_slice = commands.toSliceConst();
-    const first_command = command_slice[0];
-    testing.expect(std.meta.activeTag(first_command) == Command.EnterInsertMode);
+test "`i` = 'enter insert mode' & state is modified to be in insert mode after" {
+    const input = 'i';
+    var state = State{ .Start = CommandBuilderData{} };
+    const maybeCommand = parseCharacter(input, &state);
+    if (maybeCommand) |command| {
+        testing.expect(std.meta.activeTag(state) == State.InInsertMode);
+        testing.expect(std.meta.activeTag(command) == Command.EnterInsertMode);
+    } else {
+        std.debug.panic("No command when expecting one.");
+    }
+}
+
+test "`iC-[` = 'enter insert mode, then exit it'" {
+    const input1 = 'i';
+    var state = State{ .Start = CommandBuilderData{} };
+    const maybeCommand1 = parseCharacter(input1, &state);
+    if (maybeCommand1) |command| {
+        testing.expect(std.meta.activeTag(state) == State.InInsertMode);
+        testing.expect(std.meta.activeTag(command) == Command.EnterInsertMode);
+    } else {
+        std.debug.panic("No command when expecting one.");
+    }
+    const maybeCommand2 = parseCharacter(ESCAPE_KEY, &state);
+    if (maybeCommand2) |command| {
+        testing.expect(std.meta.activeTag(state) == State.Start);
+        testing.expect(std.meta.activeTag(command) == Command.ExitInsertMode);
+    } else {
+        std.debug.panic("No command when expecting one.");
+    }
 }
 
 pub fn runTests() void {}
+
+const ESCAPE_KEY = 27;
