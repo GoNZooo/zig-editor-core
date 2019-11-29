@@ -63,7 +63,7 @@ const CommandBuilderData = struct {
     command: Command = Command.Unset,
 };
 
-const ParseState = union(enum) {
+const State = union(enum) {
     Start: CommandBuilderData,
     // @TODO: add `InInsertMode: CommandBuilderData`
     WaitingForMotion: CommandBuilderData,
@@ -73,12 +73,12 @@ const ParseState = union(enum) {
     WaitingForGCommand: CommandBuilderData,
 };
 
-fn parseCharacter(c: u8, state: *ParseState) ?Command {
+fn parseCharacter(c: u8, state: *State) ?Command {
     switch (state.*) {
-        ParseState.Start => |*builder_data| {
+        State.Start => |*builder_data| {
             switch (c) {
                 '"' => {
-                    state.* = ParseState{ .WaitingForRegisterCharacter = builder_data.* };
+                    state.* = State{ .WaitingForRegisterCharacter = builder_data.* };
 
                     return null;
                 },
@@ -100,7 +100,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         builder_data.register,
                         builder_data.range,
                     );
-                    state.* = ParseState{ .WaitingForMotion = builder_data.* };
+                    state.* = State{ .WaitingForMotion = builder_data.* };
 
                     return null;
                 },
@@ -110,7 +110,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         builder_data.register,
                         builder_data.range,
                     );
-                    state.* = ParseState{ .WaitingForMark = builder_data.* };
+                    state.* = State{ .WaitingForMark = builder_data.* };
 
                     return null;
                 },
@@ -120,7 +120,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         builder_data.register,
                         builder_data.range,
                     );
-                    state.* = ParseState{ .Start = CommandBuilderData{} };
+                    state.* = State{ .Start = CommandBuilderData{} };
 
                     return command;
                 },
@@ -130,12 +130,12 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         builder_data.register,
                         builder_data.range,
                     );
-                    state.* = ParseState{ .WaitingForTarget = builder_data.* };
+                    state.* = State{ .WaitingForTarget = builder_data.* };
 
                     return null;
                 },
                 'g' => {
-                    state.* = ParseState{ .WaitingForGCommand = builder_data.* };
+                    state.* = State{ .WaitingForGCommand = builder_data.* };
 
                     return null;
                 },
@@ -154,11 +154,11 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
             }
         },
 
-        ParseState.WaitingForRegisterCharacter => |*builder_data| {
+        State.WaitingForRegisterCharacter => |*builder_data| {
             switch (c) {
                 'a'...'z', 'A'...'Z', '+', '*' => {
                     builder_data.register = c;
-                    state.* = ParseState{ .Start = builder_data.* };
+                    state.* = State{ .Start = builder_data.* };
 
                     return null;
                 },
@@ -166,12 +166,12 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
             }
         },
 
-        ParseState.WaitingForMark => |*builder_data| {
+        State.WaitingForMark => |*builder_data| {
             switch (builder_data.command) {
                 .SetMark => |*mark| {
                     mark.* = c;
                     const command = builder_data.command;
-                    state.* = ParseState{ .Start = CommandBuilderData{} };
+                    state.* = State{ .Start = CommandBuilderData{} };
 
                     return command;
                 },
@@ -180,7 +180,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         .ToMarkLine, .ToMarkPosition => |*mark| {
                             mark.* = c;
                             const command = builder_data.command;
-                            state.* = ParseState{ .Start = CommandBuilderData{} };
+                            state.* = State{ .Start = CommandBuilderData{} };
 
                             return command;
                         },
@@ -220,7 +220,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
             }
         },
 
-        ParseState.WaitingForTarget => |*builder_data| {
+        State.WaitingForTarget => |*builder_data| {
             switch (builder_data.command) {
                 .Delete,
                 .Yank,
@@ -238,7 +238,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         => |*target| {
                             target.* = c;
                             const command = builder_data.command;
-                            state.* = ParseState{ .Start = CommandBuilderData{} };
+                            state.* = State{ .Start = CommandBuilderData{} };
 
                             return command;
                         },
@@ -278,7 +278,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
             }
         },
 
-        ParseState.WaitingForMotion => |*builder_data| {
+        State.WaitingForMotion => |*builder_data| {
             switch (builder_data.command) {
                 .Delete, .Yank, .Change, .Comment => |*command_data| {
                     switch (c) {
@@ -302,7 +302,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                             } else {
                                 command_data.motion = motionFromKey(c, builder_data.*);
                                 const command = builder_data.command;
-                                state.* = ParseState{ .Start = CommandBuilderData{} };
+                                state.* = State{ .Start = CommandBuilderData{} };
 
                                 return command;
                             }
@@ -325,24 +325,24 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
                         => {
                             command_data.motion = motionFromKey(c, builder_data.*);
                             const command = builder_data.command;
-                            state.* = ParseState{ .Start = CommandBuilderData{} };
+                            state.* = State{ .Start = CommandBuilderData{} };
 
                             return command;
                         },
                         'f', 'F', 't', 'T', 'i', 's' => {
                             command_data.motion = motionFromKey(c, builder_data.*);
-                            state.* = ParseState{ .WaitingForTarget = builder_data.* };
+                            state.* = State{ .WaitingForTarget = builder_data.* };
 
                             return null;
                         },
                         '`', '\'' => {
                             command_data.motion = motionFromKey(c, builder_data.*);
-                            state.* = ParseState{ .WaitingForMark = builder_data.* };
+                            state.* = State{ .WaitingForMark = builder_data.* };
 
                             return null;
                         },
                         'g' => {
-                            state.* = ParseState{ .WaitingForGCommand = builder_data.* };
+                            state.* = State{ .WaitingForGCommand = builder_data.* };
 
                             return null;
                         },
@@ -363,7 +363,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
             }
         },
 
-        ParseState.WaitingForGCommand => |*builder_data| {
+        State.WaitingForGCommand => |*builder_data| {
             return gCommandFromKey(c, state);
         },
     }
@@ -372,7 +372,7 @@ fn parseCharacter(c: u8, state: *ParseState) ?Command {
 pub fn parseInput(allocator: *mem.Allocator, input: []const u8) !ArrayList(Command) {
     var commands = ArrayList(Command).init(allocator);
     errdefer commands.deinit();
-    var state: ParseState = ParseState{
+    var state: State = State{
         .Start = CommandBuilderData{
             .range = null,
             .register = null,
@@ -536,7 +536,7 @@ fn motionFromKey(character: u8, builder_data: CommandBuilderData) Motion {
     };
 }
 
-fn gCommandFromKey(character: u8, state: *ParseState) ?Command {
+fn gCommandFromKey(character: u8, state: *State) ?Command {
     return switch (state.*) {
         .WaitingForGCommand => |*builder_data| outer: {
             switch (character) {
@@ -577,7 +577,7 @@ fn gCommandFromKey(character: u8, state: *ParseState) ?Command {
                             .register = null,
                         },
                     };
-                    state.* = ParseState{ .WaitingForMotion = builder_data.* };
+                    state.* = State{ .WaitingForMotion = builder_data.* };
 
                     break :outer null;
                 },
