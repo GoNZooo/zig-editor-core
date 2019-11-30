@@ -55,6 +55,12 @@ pub const Command = union(enum) {
     EnterInsertMode: u32,
     Insert: u8,
     ExitInsertMode,
+    ReplaceInsert: ReplaceInsertData,
+};
+
+const ReplaceInsertData = struct {
+    register: ?u8,
+    range: u32,
 };
 
 const CommandBuilderData = struct {
@@ -150,7 +156,7 @@ fn parseCharacter(c: u8, state: *State) ?Command {
 
                     return null;
                 },
-                'i' => {
+                'i', 's' => {
                     const command = commandFromKey(c, null, builder_data.range);
                     state.* = State{ .InInsertMode = InsertModeData{} };
 
@@ -238,6 +244,7 @@ fn parseCharacter(c: u8, state: *State) ?Command {
                 .EnterInsertMode,
                 .Insert,
                 .ExitInsertMode,
+                .ReplaceInsert,
                 => std.debug.panic(
                     "Invalid command for `WaitingForMark`: {}\n",
                     builder_data.command,
@@ -298,6 +305,7 @@ fn parseCharacter(c: u8, state: *State) ?Command {
                 .EnterInsertMode,
                 .Insert,
                 .ExitInsertMode,
+                .ReplaceInsert,
                 => std.debug.panic(
                     "invalid command for `WaitingForTarget`: {}\n",
                     builder_data.command,
@@ -386,6 +394,7 @@ fn parseCharacter(c: u8, state: *State) ?Command {
                 .EnterInsertMode,
                 .Insert,
                 .ExitInsertMode,
+                .ReplaceInsert,
                 => std.debug.panic(
                     "invalid command for `WaitingForMotion`: {}\n",
                     builder_data.command,
@@ -550,6 +559,12 @@ fn commandFromKey(character: u8, register: ?u8, range: ?u32) Command {
         'J' => Command{ .BringLineUp = range orelse 1 },
         'u' => Command.Undo,
         'i' => Command{ .EnterInsertMode = range orelse 1 },
+        's' => Command{
+            .ReplaceInsert = ReplaceInsertData{
+                .range = range orelse 1,
+                .register = register,
+            },
+        },
         else => std.debug.panic("unsupported command key: {}\n", character),
     };
 }
@@ -612,6 +627,7 @@ fn gCommandFromKey(character: u8, state: *State) ?Command {
                         .EnterInsertMode,
                         .Insert,
                         .ExitInsertMode,
+                        .ReplaceInsert,
                         => {
                             std.debug.panic("invalid g command state: {}\n", builder_data.command);
                         },
@@ -2165,6 +2181,28 @@ test "`igaf%C-[` = 'enter insert mode, then exit it'" {
     const last_command = command_slice[5];
     testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
 }
+
+test "`3sgaf%C-[` = 'replace three characters, then exit insert mode'" {
+    const input = "3sgaf%\x1b";
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 6);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.ReplaceInsert);
+    switch (first_command) {
+        .ReplaceInsert => |command_data| {
+            testing.expectEqual(command_data.range, 3);
+            testing.expectEqual(command_data.register, null);
+        },
+        else => unreachable,
+    }
+    const insert_commands = command_slice[1..(command_slice.len - 1)];
+    for (insert_commands) |ic, index| {
+        testing.expect(std.meta.activeTag(ic) == Command.Insert);
+        switch (ic) {
+            .Insert => |character| {
+                // +2 because of `3s`
+                testing.expectEqual(character, input[index + 2]);
             },
             else => unreachable,
         }
