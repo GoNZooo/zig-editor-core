@@ -53,7 +53,7 @@ pub const Command = union(enum) {
     BringLineUp: u32,
     Undo,
     EnterInsertMode: u32,
-    Insert: InsertData,
+    Insert: u8,
     ExitInsertMode,
 };
 
@@ -407,12 +407,7 @@ fn parseCharacter(c: u8, state: *State) ?Command {
                     break :i command;
                 },
                 else => |character| i: {
-                    break :i Command{
-                        .Insert = InsertData{
-                            .character = character,
-                            .range = insert_mode_data.range orelse 1,
-                        },
-                    };
+                    break :i Command{ .Insert = character };
                 },
             };
         },
@@ -2161,8 +2156,15 @@ test "`igaf%C-[` = 'enter insert mode, then exit it'" {
     for (insert_commands) |ic, index| {
         testing.expect(std.meta.activeTag(ic) == Command.Insert);
         switch (ic) {
-            .Insert => |insert_data| {
-                testing.expectEqual(insert_data.character, input[index + 1]);
+            .Insert => |character| {
+                testing.expectEqual(character, input[index + 1]);
+            },
+            else => unreachable,
+        }
+    }
+    const last_command = command_slice[5];
+    testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
+}
             },
             else => unreachable,
         }
