@@ -2169,9 +2169,9 @@ test "`igaf%C-[` = 'enter insert mode, then exit it'" {
         else => unreachable,
     }
     const insert_commands = command_slice[1..(command_slice.len - 1)];
-    for (insert_commands) |ic, index| {
-        testing.expect(std.meta.activeTag(ic) == Command.Insert);
-        switch (ic) {
+    for (insert_commands) |insert_command, index| {
+        testing.expect(std.meta.activeTag(insert_command) == Command.Insert);
+        switch (insert_command) {
             .Insert => |character| {
                 testing.expectEqual(character, input[index + 1]);
             },
@@ -2197,9 +2197,9 @@ test "`sgaf%C-[` = 'replace current character, then exit insert mode'" {
         else => unreachable,
     }
     const insert_commands = command_slice[1..(command_slice.len - 1)];
-    for (insert_commands) |ic, index| {
-        testing.expect(std.meta.activeTag(ic) == Command.Insert);
-        switch (ic) {
+    for (insert_commands) |insert_command, index| {
+        testing.expect(std.meta.activeTag(insert_command) == Command.Insert);
+        switch (insert_command) {
             .Insert => |character| {
                 testing.expectEqual(character, input[index + 1]);
             },
@@ -2225,9 +2225,9 @@ test "`3sgaf%C-[` = 'replace three characters, then exit insert mode'" {
         else => unreachable,
     }
     const insert_commands = command_slice[1..(command_slice.len - 1)];
-    for (insert_commands) |ic, index| {
-        testing.expect(std.meta.activeTag(ic) == Command.Insert);
-        switch (ic) {
+    for (insert_commands) |insert_command, index| {
+        testing.expect(std.meta.activeTag(insert_command) == Command.Insert);
+        switch (insert_command) {
             .Insert => |character| {
                 // +2 because of `3s`
                 testing.expectEqual(character, input[index + 2]);
@@ -2254,9 +2254,9 @@ test "`\"a3sgaf%C-[` = 'replace three characters, then exit insert mode'" {
         else => unreachable,
     }
     const insert_commands = command_slice[1..(command_slice.len - 1)];
-    for (insert_commands) |ic, index| {
-        testing.expect(std.meta.activeTag(ic) == Command.Insert);
-        switch (ic) {
+    for (insert_commands) |insert_command, index| {
+        testing.expect(std.meta.activeTag(insert_command) == Command.Insert);
+        switch (insert_command) {
             .Insert => |character| {
                 // +4 because of `"a3s`
                 testing.expectEqual(character, input[index + 4]);
