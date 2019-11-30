@@ -2201,7 +2201,6 @@ test "`sgaf%C-[` = 'replace current character, then exit insert mode'" {
         testing.expect(std.meta.activeTag(ic) == Command.Insert);
         switch (ic) {
             .Insert => |character| {
-                // +2 because of `3s`
                 testing.expectEqual(character, input[index + 1]);
             },
             else => unreachable,
