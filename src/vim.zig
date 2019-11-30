@@ -2230,7 +2230,7 @@ test "`\"a3sgaf%C-[` = 'replace three characters, then exit insert mode'" {
         testing.expect(std.meta.activeTag(ic) == Command.Insert);
         switch (ic) {
             .Insert => |character| {
-                // +4 because of `3s`
+                // +4 because of `"a3s`
                 testing.expectEqual(character, input[index + 4]);
             },
             else => unreachable,
