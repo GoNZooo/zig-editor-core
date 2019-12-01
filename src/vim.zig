@@ -56,6 +56,11 @@ pub const Command = union(enum) {
     Insert: u8,
     ExitInsertMode,
     ReplaceInsert: ReplaceInsertData,
+    // @NOTE: `Insert{Upwards,Downwards} are actually supposed to insert on all lines when using
+    // ranges, but the current insert mode doesn't handle this (2019-12-01). It could be solved via
+    // on the client interpretation side via spawning multiple cursors as a response to the range
+    // attribute, but punting it to the client seems awkward. With that said, this is not a use case
+    // that I'm going to necessarily miss if it never gets implemented...
     InsertDownwards: u32,
     InsertUpwards: u32,
 };
@@ -2307,6 +2312,34 @@ test "`ogaf%C-[` = 'insert on new line downwards, then exit insert mode'" {
     testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
 }
 
+test "`265ogaf%C-[` = 'insert on new line downwards, then exit insert mode'" {
+    const input = "265ogaf%\x1b";
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 6);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.InsertDownwards);
+    switch (first_command) {
+        .InsertDownwards => |range| {
+            testing.expectEqual(range, 265);
+        },
+        else => unreachable,
+    }
+    const insert_commands = command_slice[1..(command_slice.len - 1)];
+    for (insert_commands) |insert_command, index| {
+        testing.expect(std.meta.activeTag(insert_command) == Command.Insert);
+        switch (insert_command) {
+            .Insert => |character| {
+                // +4 because of `265o`
+                testing.expectEqual(character, input[index + 4]);
+            },
+            else => unreachable,
+        }
+    }
+    const last_command = command_slice[5];
+    testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
+}
+
 test "`Ogaf%C-[` = 'insert on new line upwards, then exit insert mode'" {
     const input = "Ogaf%\x1b";
     const commands = try parseInput(direct_allocator, input);
@@ -2334,6 +2367,33 @@ test "`Ogaf%C-[` = 'insert on new line upwards, then exit insert mode'" {
     testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
 }
 
+test "`15Ogaf%C-[` = 'insert on new line upwards, then exit insert mode'" {
+    const input = "15Ogaf%\x1b";
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 6);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.InsertUpwards);
+    switch (first_command) {
+        .InsertUpwards => |range| {
+            testing.expectEqual(range, 15);
+        },
+        else => unreachable,
+    }
+    const insert_commands = command_slice[1..(command_slice.len - 1)];
+    for (insert_commands) |insert_command, index| {
+        testing.expect(std.meta.activeTag(insert_command) == Command.Insert);
+        switch (insert_command) {
+            .Insert => |character| {
+                // +3 because of `15O`
+                testing.expectEqual(character, input[index + 3]);
+            },
+            else => unreachable,
+        }
+    }
+    const last_command = command_slice[5];
+    testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
+}
 pub fn runTests() void {}
 
 const ESCAPE_KEY = '\x1b';
