@@ -445,7 +445,7 @@ fn parseCharacter(c: u8, state: *State) ?Command {
         State.InInsertMode => |*insert_mode_data| {
             return switch (c) {
                 ESCAPE_KEY => i: {
-                    const command: Command = Command.ExitInsertMode;
+                    const command = Command{ .ExitInsertMode = undefined };
                     state.* = State{ .Start = CommandBuilderData{} };
 
                     break :i command;
