@@ -63,6 +63,9 @@ pub const Command = union(enum) {
     // that I'm going to necessarily miss if it never gets implemented...
     InsertDownwards: u32,
     InsertUpwards: u32,
+    ScrollTop,
+    ScrollCenter,
+    ScrollBottom,
 };
 
 const ReplaceInsertData = struct {
@@ -95,6 +98,7 @@ const State = union(enum) {
     WaitingForRegisterCharacter: CommandBuilderData,
     WaitingForMark: CommandBuilderData,
     WaitingForGCommand: CommandBuilderData,
+    WaitingForZCommand: CommandBuilderData,
 };
 
 fn parseCharacter(c: u8, state: *State) ?Command {
@@ -160,6 +164,11 @@ fn parseCharacter(c: u8, state: *State) ?Command {
                 },
                 'g' => {
                     state.* = State{ .WaitingForGCommand = builder_data.* };
+
+                    return null;
+                },
+                'z' => {
+                    state.* = State{ .WaitingForZCommand = builder_data.* };
 
                     return null;
                 },
@@ -254,6 +263,9 @@ fn parseCharacter(c: u8, state: *State) ?Command {
                 .ReplaceInsert,
                 .InsertDownwards,
                 .InsertUpwards,
+                .ScrollTop,
+                .ScrollCenter,
+                .ScrollBottom,
                 => std.debug.panic(
                     "Invalid command for `WaitingForMark`: {}\n",
                     builder_data.command,
@@ -317,6 +329,9 @@ fn parseCharacter(c: u8, state: *State) ?Command {
                 .ReplaceInsert,
                 .InsertDownwards,
                 .InsertUpwards,
+                .ScrollTop,
+                .ScrollCenter,
+                .ScrollBottom,
                 => std.debug.panic(
                     "invalid command for `WaitingForTarget`: {}\n",
                     builder_data.command,
@@ -408,6 +423,9 @@ fn parseCharacter(c: u8, state: *State) ?Command {
                 .ReplaceInsert,
                 .InsertDownwards,
                 .InsertUpwards,
+                .ScrollTop,
+                .ScrollCenter,
+                .ScrollBottom,
                 => std.debug.panic(
                     "invalid command for `WaitingForMotion`: {}\n",
                     builder_data.command,
@@ -418,6 +436,10 @@ fn parseCharacter(c: u8, state: *State) ?Command {
 
         State.WaitingForGCommand => |*builder_data| {
             return gCommandFromKey(c, state);
+        },
+
+        State.WaitingForZCommand => |*builder_data| {
+            return zCommandFromKey(c, state);
         },
 
         State.InInsertMode => |*insert_mode_data| {
@@ -645,6 +667,9 @@ fn gCommandFromKey(character: u8, state: *State) ?Command {
                         .ReplaceInsert,
                         .InsertDownwards,
                         .InsertUpwards,
+                        .ScrollTop,
+                        .ScrollCenter,
+                        .ScrollBottom,
                         => {
                             std.debug.panic("invalid g command state: {}\n", builder_data.command);
                         },
@@ -662,6 +687,32 @@ fn gCommandFromKey(character: u8, state: *State) ?Command {
                     state.* = State{ .WaitingForMotion = builder_data.* };
 
                     break :outer null;
+                },
+                else => std.debug.panic("unsupported G command: {c}\n", character),
+            }
+        },
+        else => unreachable,
+    };
+}
+
+fn zCommandFromKey(character: u8, state: *State) ?Command {
+    return switch (state.*) {
+        .WaitingForZCommand => |*builder_data| outer: {
+            switch (character) {
+                't' => {
+                    state.* = State{ .Start = CommandBuilderData{} };
+
+                    break :outer Command{ .ScrollTop = undefined };
+                },
+                'z' => {
+                    state.* = State{ .Start = CommandBuilderData{} };
+
+                    break :outer Command{ .ScrollCenter = undefined };
+                },
+                'b' => {
+                    state.* = State{ .Start = CommandBuilderData{} };
+
+                    break :outer Command{ .ScrollBottom = undefined };
                 },
                 else => std.debug.panic("unsupported G command: {c}\n", character),
             }
@@ -2394,6 +2445,34 @@ test "`15Ogaf%C-[` = 'insert on new line upwards, then exit insert mode'" {
     const last_command = command_slice[5];
     testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
 }
+
+test "`zt` = 'scroll view so that cursor is at top'" {
+    const input = "zt";
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.ScrollTop);
+}
+
+test "`zz` = 'scroll view so that cursor is at center'" {
+    const input = "zz";
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.ScrollCenter);
+}
+
+test "`zb` = 'scroll view so that cursor is at bottom'" {
+    const input = "zb";
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.ScrollBottom);
+}
+
 pub fn runTests() void {}
 
 const ESCAPE_KEY = '\x1b';
