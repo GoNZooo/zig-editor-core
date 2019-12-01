@@ -56,6 +56,8 @@ pub const Command = union(enum) {
     Insert: u8,
     ExitInsertMode,
     ReplaceInsert: ReplaceInsertData,
+    InsertDownwards: u32,
+    InsertUpwards: u32,
 };
 
 const ReplaceInsertData = struct {
@@ -156,7 +158,7 @@ fn parseCharacter(c: u8, state: *State) ?Command {
 
                     return null;
                 },
-                'i', 's' => {
+                'i', 's', 'o', 'O' => {
                     const command = commandFromKey(c, builder_data.register, builder_data.range);
                     state.* = State{ .InInsertMode = InsertModeData{} };
 
@@ -245,6 +247,8 @@ fn parseCharacter(c: u8, state: *State) ?Command {
                 .Insert,
                 .ExitInsertMode,
                 .ReplaceInsert,
+                .InsertDownwards,
+                .InsertUpwards,
                 => std.debug.panic(
                     "Invalid command for `WaitingForMark`: {}\n",
                     builder_data.command,
@@ -306,6 +310,8 @@ fn parseCharacter(c: u8, state: *State) ?Command {
                 .Insert,
                 .ExitInsertMode,
                 .ReplaceInsert,
+                .InsertDownwards,
+                .InsertUpwards,
                 => std.debug.panic(
                     "invalid command for `WaitingForTarget`: {}\n",
                     builder_data.command,
@@ -395,6 +401,8 @@ fn parseCharacter(c: u8, state: *State) ?Command {
                 .Insert,
                 .ExitInsertMode,
                 .ReplaceInsert,
+                .InsertDownwards,
+                .InsertUpwards,
                 => std.debug.panic(
                     "invalid command for `WaitingForMotion`: {}\n",
                     builder_data.command,
@@ -565,6 +573,8 @@ fn commandFromKey(character: u8, register: ?u8, range: ?u32) Command {
                 .register = register,
             },
         },
+        'o' => Command{ .InsertDownwards = range orelse 1 },
+        'O' => Command{ .InsertUpwards = range orelse 1 },
         else => std.debug.panic("unsupported command key: {}\n", character),
     };
 }
@@ -628,6 +638,8 @@ fn gCommandFromKey(character: u8, state: *State) ?Command {
                         .Insert,
                         .ExitInsertMode,
                         .ReplaceInsert,
+                        .InsertDownwards,
+                        .InsertUpwards,
                         => {
                             std.debug.panic("invalid g command state: {}\n", builder_data.command);
                         },
@@ -2260,6 +2272,60 @@ test "`\"a3sgaf%C-[` = 'replace three characters, then exit insert mode'" {
             .Insert => |character| {
                 // +4 because of `"a3s`
                 testing.expectEqual(character, input[index + 4]);
+            },
+            else => unreachable,
+        }
+    }
+    const last_command = command_slice[5];
+    testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
+}
+
+test "`ogaf%C-[` = 'insert on new line downwards, then exit insert mode'" {
+    const input = "ogaf%\x1b";
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 6);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.InsertDownwards);
+    switch (first_command) {
+        .InsertDownwards => |range| {
+            testing.expectEqual(range, 1);
+        },
+        else => unreachable,
+    }
+    const insert_commands = command_slice[1..(command_slice.len - 1)];
+    for (insert_commands) |insert_command, index| {
+        testing.expect(std.meta.activeTag(insert_command) == Command.Insert);
+        switch (insert_command) {
+            .Insert => |character| {
+                testing.expectEqual(character, input[index + 1]);
+            },
+            else => unreachable,
+        }
+    }
+    const last_command = command_slice[5];
+    testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
+}
+
+test "`Ogaf%C-[` = 'insert on new line upwards, then exit insert mode'" {
+    const input = "Ogaf%\x1b";
+    const commands = try parseInput(direct_allocator, input);
+    testing.expectEqual(commands.count(), 6);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.InsertUpwards);
+    switch (first_command) {
+        .InsertUpwards => |range| {
+            testing.expectEqual(range, 1);
+        },
+        else => unreachable,
+    }
+    const insert_commands = command_slice[1..(command_slice.len - 1)];
+    for (insert_commands) |insert_command, index| {
+        testing.expect(std.meta.activeTag(insert_command) == Command.Insert);
+        switch (insert_command) {
+            .Insert => |character| {
+                testing.expectEqual(character, input[index + 1]);
             },
             else => unreachable,
         }
