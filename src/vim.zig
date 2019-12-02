@@ -40,6 +40,14 @@ pub const Motion = union(enum) {
     ToMatching,
 };
 
+pub const Key = struct {
+    key_code: u8,
+    left_control: bool,
+    left_alt: bool,
+    right_control: bool,
+    right_alt: bool,
+};
+
 pub const Command = union(enum) {
     Unset,
     MotionOnly: CommandData,
@@ -100,14 +108,6 @@ const State = union(enum) {
     WaitingForMark: CommandBuilderData,
     WaitingForGCommand: CommandBuilderData,
     WaitingForZCommand: CommandBuilderData,
-};
-
-const Key = struct {
-    key_code: u8,
-    left_control: bool,
-    left_alt: bool,
-    right_control: bool,
-    right_alt: bool,
 };
 
 fn stringToKeys(comptime size: usize, string: [size]u8) [size]Key {
