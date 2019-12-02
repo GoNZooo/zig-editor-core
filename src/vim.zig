@@ -52,6 +52,7 @@ pub const Command = union(enum) {
     Comment: CommandData,
     BringLineUp: u32,
     Undo,
+    Redo,
     EnterInsertMode: u32,
     Insert: u8,
     ExitInsertMode,
@@ -153,7 +154,7 @@ fn handleKey(key: Key, state: *State) ?Command {
                 },
                 'd', 'y', 'c' => {
                     builder_data.command = commandFromKey(
-                        key.key_code,
+                        key,
                         builder_data.register,
                         builder_data.range,
                     );
@@ -163,7 +164,7 @@ fn handleKey(key: Key, state: *State) ?Command {
                 },
                 'm', '\'', '`' => {
                     builder_data.command = commandFromKey(
-                        key.key_code,
+                        key,
                         builder_data.register,
                         builder_data.range,
                     );
@@ -173,7 +174,7 @@ fn handleKey(key: Key, state: *State) ?Command {
                 },
                 'p', 'P', 'j', 'k', '$', '^', '{', '}', 'l', 'h', 'G', 'J', 'u' => {
                     const command = commandFromKey(
-                        key.key_code,
+                        key,
                         builder_data.register,
                         builder_data.range,
                     );
@@ -183,7 +184,7 @@ fn handleKey(key: Key, state: *State) ?Command {
                 },
                 'f', 'F', 't', 'T' => {
                     builder_data.command = commandFromKey(
-                        key.key_code,
+                        key,
                         builder_data.register,
                         builder_data.range,
                     );
@@ -202,14 +203,23 @@ fn handleKey(key: Key, state: *State) ?Command {
                     return null;
                 },
                 'i', 's', 'o', 'O' => {
-                    const command = commandFromKey(
-                        key.key_code,
-                        builder_data.register,
-                        builder_data.range,
-                    );
+                    const command = commandFromKey(key, builder_data.register, builder_data.range);
                     state.* = State{ .InInsertMode = InsertModeData{} };
 
                     return command;
+                },
+                'r' => {
+                    const command = commandFromKey(key, builder_data.register, builder_data.range);
+                    switch (command) {
+                        Command.Redo => {
+                            state.* = State{ .Start = CommandBuilderData{} };
+
+                            return command;
+                        },
+                        else => {
+                            return null;
+                        },
+                    }
                 },
 
                 // @TODO: add 'C' support
@@ -290,6 +300,7 @@ fn handleKey(key: Key, state: *State) ?Command {
                 .Unset,
                 .BringLineUp,
                 .Undo,
+                .Redo,
                 .EnterInsertMode,
                 .Insert,
                 .ExitInsertMode,
@@ -356,6 +367,7 @@ fn handleKey(key: Key, state: *State) ?Command {
                 .SetMark,
                 .BringLineUp,
                 .Undo,
+                .Redo,
                 .EnterInsertMode,
                 .Insert,
                 .ExitInsertMode,
@@ -450,6 +462,7 @@ fn handleKey(key: Key, state: *State) ?Command {
                 .SetMark,
                 .BringLineUp,
                 .Undo,
+                .Redo,
                 .EnterInsertMode,
                 .Insert,
                 .ExitInsertMode,
@@ -512,8 +525,15 @@ pub fn handleKeys(allocator: *mem.Allocator, keys: []const Key) !ArrayList(Comma
     return commands;
 }
 
-fn commandFromKey(character: u8, register: ?u8, range: ?u32) Command {
-    return switch (character) {
+fn commandFromKey(key: Key, register: ?u8, range: ?u32) Command {
+    if (key.left_control) {
+        return switch (key.key_code) {
+            'r' => Command.Redo,
+            else => std.debug.panic("unsupported command key with left control: {}\n", key.key_code),
+        };
+    }
+
+    return switch (key.key_code) {
         'd' => Command{ .Delete = CommandData{ .motion = Motion.Unset, .register = register } },
         'y' => Command{ .Yank = CommandData{ .motion = Motion.Unset, .register = register } },
         'c' => Command{ .Change = CommandData{ .motion = Motion.Unset, .register = register } },
@@ -635,9 +655,7 @@ fn commandFromKey(character: u8, register: ?u8, range: ?u32) Command {
         },
         'o' => Command{ .InsertDownwards = range orelse 1 },
         'O' => Command{ .InsertUpwards = range orelse 1 },
-        // @TODO: add `C-r` here to create a Redo command
-        // will require a `Key` to be passed to `commandFromKey` instead of u8
-        else => std.debug.panic("unsupported command key: {}\n", character),
+        else => std.debug.panic("unsupported command key: {}\n", key.key_code),
     };
 }
 
@@ -696,6 +714,7 @@ fn gCommandFromKey(character: u8, state: *State) ?Command {
                         .PasteBackwards,
                         .BringLineUp,
                         .Undo,
+                        .Redo,
                         .EnterInsertMode,
                         .Insert,
                         .ExitInsertMode,
@@ -2289,6 +2308,23 @@ test "`u` = 'undo'" {
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Undo);
+}
+
+test "`C-r` = 'redo'" {
+    const input = Key{
+        .key_code = 'r',
+        .left_control = true,
+        .left_alt = false,
+        .right_control = false,
+        .right_alt = false,
+    };
+    var state = State{ .Start = CommandBuilderData{} };
+    const command = handleKey(input, &state);
+    if (command) |c| {
+        testing.expect(std.meta.activeTag(c) == Command.Redo);
+    } else {
+        std.debug.panic("No command when expecting one.");
+    }
 }
 
 test "`i` = 'enter insert mode' & state is modified to be in insert mode after" {
