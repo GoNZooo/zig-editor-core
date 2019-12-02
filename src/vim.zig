@@ -635,6 +635,8 @@ fn commandFromKey(character: u8, register: ?u8, range: ?u32) Command {
         },
         'o' => Command{ .InsertDownwards = range orelse 1 },
         'O' => Command{ .InsertUpwards = range orelse 1 },
+        // @TODO: add `C-r` here to create a Redo command
+        // will require a `Key` to be passed to `commandFromKey` instead of u8
         else => std.debug.panic("unsupported command key: {}\n", character),
     };
 }
