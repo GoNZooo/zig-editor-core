@@ -4,6 +4,14 @@ const mem = std.mem;
 const direct_allocator = std.heap.direct_allocator;
 const ArrayList = std.ArrayList;
 
+pub const Key = struct {
+    key_code: u8,
+    left_control: bool,
+    left_alt: bool,
+    right_control: bool,
+    right_alt: bool,
+};
+
 pub const CommandData = struct {
     motion: Motion,
     register: ?u8,
@@ -12,6 +20,11 @@ pub const CommandData = struct {
 pub const PasteData = struct {
     register: ?u8,
     range: ?u32,
+};
+
+pub const ReplaceInsertData = struct {
+    register: ?u8,
+    range: u32,
 };
 
 pub const Motion = union(enum) {
@@ -38,14 +51,6 @@ pub const Motion = union(enum) {
     Inside: ?u8,
     Surrounding: ?u8,
     ToMatching,
-};
-
-pub const Key = struct {
-    key_code: u8,
-    left_control: bool,
-    left_alt: bool,
-    right_control: bool,
-    right_alt: bool,
 };
 
 pub const Command = union(enum) {
@@ -75,11 +80,6 @@ pub const Command = union(enum) {
     ScrollTop,
     ScrollCenter,
     ScrollBottom,
-};
-
-const ReplaceInsertData = struct {
-    register: ?u8,
-    range: u32,
 };
 
 const CommandBuilderData = struct {
