@@ -120,7 +120,7 @@ fn stringToKeys(comptime size: usize, string: [size]u8) [size]Key {
 }
 
 fn characterToKey(character: u8) Key {
-    const key = Key{ .key_code = character};
+    const key = Key{ .key_code = character };
 
     return key;
 }
@@ -2316,13 +2316,7 @@ test "`C-r` = 'redo'" {
 }
 
 test "`i` = 'enter insert mode' & state is modified to be in insert mode after" {
-    const input = Key{
-        .key_code = 'i',
-        .left_control = false,
-        .left_alt = false,
-        .right_control = false,
-        .right_alt = false,
-    };
+    const input = Key{ .key_code = 'i' };
     var state = State{ .Start = CommandBuilderData{} };
     const maybeCommand = handleKey(input, &state);
     if (maybeCommand) |command| {
@@ -2334,13 +2328,7 @@ test "`i` = 'enter insert mode' & state is modified to be in insert mode after" 
 }
 
 test "`iC-[` = 'enter insert mode, then exit it'" {
-    const input = Key{
-        .key_code = 'i',
-        .left_control = false,
-        .left_alt = false,
-        .right_control = false,
-        .right_alt = false,
-    };
+    const input = Key{ .key_code = 'i' };
     var state = State{ .Start = CommandBuilderData{} };
     const maybeCommand1 = handleKey(input, &state);
     if (maybeCommand1) |command| {
@@ -2621,10 +2609,4 @@ test "`zb` = 'scroll view so that cursor is at bottom'" {
 
 pub fn runTests() void {}
 
-const ESCAPE_KEY = Key{
-    .key_code = '\x1b',
-    .left_control = false,
-    .left_alt = false,
-    .right_control = false,
-    .right_alt = false,
-};
+const ESCAPE_KEY = Key{ .key_code = '\x1b' };
