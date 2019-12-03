@@ -635,6 +635,7 @@ fn commandFromKey(key: Key, register: ?u8, range: ?u32) Command {
     };
 }
 
+// @TODO: make `motionFromKey` take `Key` instead of `u8`
 fn motionFromKey(character: u8, builder_data: CommandBuilderData) Motion {
     return switch (character) {
         'd', 'y', 'c' => Motion{ .DownwardsLines = if (builder_data.range) |r| (r - 1) else 0 },
@@ -663,6 +664,7 @@ fn motionFromKey(character: u8, builder_data: CommandBuilderData) Motion {
     };
 }
 
+// @TODO: make `gCommandFromKey` take `Key` instead of `u8`
 fn gCommandFromKey(character: u8, state: *State) ?Command {
     return switch (state.*) {
         .WaitingForGCommand => |*builder_data| outer: {
@@ -725,6 +727,7 @@ fn gCommandFromKey(character: u8, state: *State) ?Command {
     };
 }
 
+// @TODO: make `zCommandFromKey` take `Key` instead of `u8`
 fn zCommandFromKey(character: u8, state: *State) ?Command {
     return switch (state.*) {
         .WaitingForZCommand => |*builder_data| outer: {
