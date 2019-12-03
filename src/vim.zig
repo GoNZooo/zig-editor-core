@@ -42,6 +42,9 @@ pub const Command = union(enum) {
     ScrollTop,
     ScrollCenter,
     ScrollBottom,
+    // @TODO: add `StoreMacro` command that will mark a command sequence as being stored in a macro
+    // slot/register.
+    // @TODO: add `PlayMacro` command that will take a macro slot/register to play.
 };
 
 /// Represents a motion that is usually attached to a `Command` (unless the command is `MotionOnly`).
