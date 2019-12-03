@@ -100,6 +100,7 @@ pub const State = union(enum) {
     WaitingForMark: CommandBuilderData,
     WaitingForGCommand: CommandBuilderData,
     WaitingForZCommand: CommandBuilderData,
+    // @TODO: `RecordingMacro` state that will have to contain a list of recorded commands
 };
 
 pub const CommandBuilderData = struct {
