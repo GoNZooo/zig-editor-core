@@ -4,6 +4,7 @@ const mem = std.mem;
 const direct_allocator = std.heap.direct_allocator;
 const ArrayList = std.ArrayList;
 
+/// Represents a key press. Unless otherwise specified all modifier keys are assumed to be `false`.
 pub const Key = struct {
     key_code: u8,
     left_control: bool = false,
@@ -12,47 +13,8 @@ pub const Key = struct {
     right_alt: bool = false,
 };
 
-pub const CommandData = struct {
-    motion: Motion,
-    register: ?u8,
-};
-
-pub const PasteData = struct {
-    register: ?u8,
-    range: ?u32,
-};
-
-pub const ReplaceInsertData = struct {
-    register: ?u8,
-    range: u32,
-};
-
-pub const Motion = union(enum) {
-    Unset,
-    UntilEndOfWord: u32,
-    UntilNextWord: u32,
-    UntilEndOfLine: u32,
-    UntilBeginningOfLine: u32,
-    UntilColumnZero,
-    UntilBeginningOfFile: u32,
-    UntilEndOfFile: u32,
-    DownwardsLines: u32,
-    UpwardsLines: u32,
-    ForwardsCharacter: u32,
-    BackwardsCharacter: u32,
-    ForwardsParagraph: u32,
-    BackwardsParagraph: u32,
-    ForwardsIncluding: ?u8,
-    BackwardsIncluding: ?u8,
-    ForwardsExcluding: ?u8,
-    BackwardsExcluding: ?u8,
-    ToMarkLine: ?u8,
-    ToMarkPosition: ?u8,
-    Inside: ?u8,
-    Surrounding: ?u8,
-    ToMatching,
-};
-
+/// Represents a vim command. These are to be interpreted as needed by whichever runtime is
+/// interested.
 pub const Command = union(enum) {
     Unset,
     MotionOnly: CommandData,
@@ -82,24 +44,51 @@ pub const Command = union(enum) {
     ScrollBottom,
 };
 
-const CommandBuilderData = struct {
-    range: ?u32 = null,
-    range_modifiers: u32 = 0,
-    register: ?u8 = null,
-    command: Command = Command.Unset,
+/// Represents a motion that is usually attached to a `Command` (unless the command is `MotionOnly`).
+pub const Motion = union(enum) {
+    Unset,
+    UntilEndOfWord: u32,
+    UntilNextWord: u32,
+    UntilEndOfLine: u32,
+    UntilBeginningOfLine: u32,
+    UntilColumnZero,
+    UntilBeginningOfFile: u32,
+    UntilEndOfFile: u32,
+    DownwardsLines: u32,
+    UpwardsLines: u32,
+    ForwardsCharacter: u32,
+    BackwardsCharacter: u32,
+    ForwardsParagraph: u32,
+    BackwardsParagraph: u32,
+    ForwardsIncluding: ?u8,
+    BackwardsIncluding: ?u8,
+    ForwardsExcluding: ?u8,
+    BackwardsExcluding: ?u8,
+    ToMarkLine: ?u8,
+    ToMarkPosition: ?u8,
+    Inside: ?u8,
+    Surrounding: ?u8,
+    ToMatching,
 };
 
-const InsertModeData = struct {
-    range: ?u32 = null,
-    range_modifiers: u32 = 0,
+pub const CommandData = struct {
+    motion: Motion,
+    register: ?u8,
 };
 
-const InsertData = struct {
-    character: u8,
+pub const PasteData = struct {
+    register: ?u8,
+    range: ?u32,
+};
+
+pub const ReplaceInsertData = struct {
+    register: ?u8,
     range: u32,
 };
 
-const State = union(enum) {
+/// Represents the current state of the vim mode; can be passed to `handleKey` in order to get a new
+/// state as well as a command if one can be generated from the passed `Key` in that `State`.
+pub const State = union(enum) {
     Start: CommandBuilderData,
     InInsertMode: InsertModeData,
     WaitingForMotion: CommandBuilderData,
@@ -108,6 +97,18 @@ const State = union(enum) {
     WaitingForMark: CommandBuilderData,
     WaitingForGCommand: CommandBuilderData,
     WaitingForZCommand: CommandBuilderData,
+};
+
+pub const CommandBuilderData = struct {
+    range: ?u32 = null,
+    range_modifiers: u32 = 0,
+    register: ?u8 = null,
+    command: Command = Command.Unset,
+};
+
+pub const InsertModeData = struct {
+    range: ?u32 = null,
+    range_modifiers: u32 = 0,
 };
 
 fn stringToKeys(comptime size: usize, string: [size]u8) [size]Key {
