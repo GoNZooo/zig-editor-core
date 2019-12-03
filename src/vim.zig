@@ -6,10 +6,10 @@ const ArrayList = std.ArrayList;
 
 pub const Key = struct {
     key_code: u8,
-    left_control: bool,
-    left_alt: bool,
-    right_control: bool,
-    right_alt: bool,
+    left_control: bool = false,
+    left_alt: bool = false,
+    right_control: bool = false,
+    right_alt: bool = false,
 };
 
 pub const CommandData = struct {
@@ -120,13 +120,7 @@ fn stringToKeys(comptime size: usize, string: [size]u8) [size]Key {
 }
 
 fn characterToKey(character: u8) Key {
-    const key = Key{
-        .key_code = character,
-        .left_control = false,
-        .left_alt = false,
-        .right_control = false,
-        .right_alt = false,
-    };
+    const key = Key{ .key_code = character};
 
     return key;
 }
@@ -2311,13 +2305,7 @@ test "`u` = 'undo'" {
 }
 
 test "`C-r` = 'redo'" {
-    const input = Key{
-        .key_code = 'r',
-        .left_control = true,
-        .left_alt = false,
-        .right_control = false,
-        .right_alt = false,
-    };
+    const input = Key{ .key_code = 'r', .left_control = true };
     var state = State{ .Start = CommandBuilderData{} };
     const command = handleKey(input, &state);
     if (command) |c| {
