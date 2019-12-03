@@ -744,7 +744,7 @@ fn zCommandFromKey(character: u8, state: *State) ?Command {
 
                     break :outer Command{ .ScrollBottom = undefined };
                 },
-                else => std.debug.panic("unsupported G command: {c}\n", character),
+                else => std.debug.panic("unsupported Z command: {c}\n", character),
             }
         },
         else => unreachable,
