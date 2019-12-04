@@ -52,7 +52,7 @@ const EndMacroData = struct {
     commands: []Command,
 };
 
-/// Represents a motion that is usually attached to a `Command` (unless the command is `MotionOnly`).
+/// Represents a motion that is usually attached to a `Command`.
 pub const Motion = union(enum) {
     Unset,
     UntilEndOfWord: u32,
