@@ -106,7 +106,7 @@ pub const State = union(enum) {
     WaitingForMark: CommandBuilderData,
     WaitingForGCommand: CommandBuilderData,
     WaitingForZCommand: CommandBuilderData,
-    WaitingForMacroSlot: CommandBuilderData,
+    WaitingForSlot: CommandBuilderData,
     RecordingMacro: RecordingMacroData,
 };
 
@@ -152,7 +152,7 @@ pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyEr
 
         .WaitingForMark => |*builder_data| handleWaitingForMark(builder_data, state, key),
 
-        .WaitingForMacroSlot => |*builder_data| {
+        .WaitingForSlot => |*builder_data| {
             switch (key.key_code) {
                 'a'...'z', 'A'...'Z', '0'...'9' => {
                     const command = Command{ .BeginMacro = key.key_code };
@@ -594,7 +594,7 @@ fn handleStart(builder_data: *CommandBuilderData, state: *State, key: Key) ?Comm
             }
         },
         'q' => {
-            state.* = State{ .WaitingForMacroSlot = builder_data.* };
+            state.* = State{ .WaitingForSlot = builder_data.* };
 
             return null;
         },
