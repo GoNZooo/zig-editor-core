@@ -1649,7 +1649,7 @@ test "`u` = 'undo'" {
 test "`C-r` = 'redo'" {
     const input = Key{ .key_code = 'r', .left_control = true };
     var state = State{ .Start = CommandBuilderData{} };
-    const command = vim.handleKey(input, &state);
+    const command = try vim.handleKey(direct_allocator, input, &state);
     if (command) |c| {
         testing.expect(std.meta.activeTag(c) == Command.Redo);
     } else {
@@ -1660,7 +1660,7 @@ test "`C-r` = 'redo'" {
 test "`i` = 'enter insert mode' & state is modified to be in insert mode after" {
     const input = Key{ .key_code = 'i' };
     var state = State{ .Start = CommandBuilderData{} };
-    const maybeCommand = vim.handleKey(input, &state);
+    const maybeCommand = try vim.handleKey(direct_allocator, input, &state);
     if (maybeCommand) |command| {
         testing.expect(std.meta.activeTag(state) == State.InInsertMode);
         testing.expect(std.meta.activeTag(command) == Command.EnterInsertMode);
@@ -1672,14 +1672,14 @@ test "`i` = 'enter insert mode' & state is modified to be in insert mode after" 
 test "`iC-[` = 'enter insert mode, then exit it'" {
     const input = Key{ .key_code = 'i' };
     var state = State{ .Start = CommandBuilderData{} };
-    const maybeCommand1 = vim.handleKey(input, &state);
+    const maybeCommand1 = try vim.handleKey(direct_allocator, input, &state);
     if (maybeCommand1) |command| {
         testing.expect(std.meta.activeTag(state) == State.InInsertMode);
         testing.expect(std.meta.activeTag(command) == Command.EnterInsertMode);
     } else {
         std.debug.panic("No command when expecting one.");
     }
-    const maybeCommand2 = vim.handleKey(vim.ESCAPE_KEY, &state);
+    const maybeCommand2 = try vim.handleKey(direct_allocator, vim.ESCAPE_KEY, &state);
     if (maybeCommand2) |command| {
         testing.expect(std.meta.activeTag(state) == State.Start);
         testing.expect(std.meta.activeTag(command) == Command.ExitInsertMode);
@@ -1958,6 +1958,56 @@ test "`zb` = 'scroll view so that cursor is at bottom'" {
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.ScrollBottom);
+}
+
+test "`qawibC-[q` = 'record macro into 'a'; insert 'b', escape'" {
+    const input = "qawib\x1bq";
+    const keys = stringToKeys(input.len, input);
+    var state = State{ .Start = CommandBuilderData{} };
+    const commands = try vim.handleKeys(direct_allocator, keys, &state);
+    testing.expectEqual(commands.count(), 6);
+    const command_slice = commands.toSliceConst();
+
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.BeginMacro);
+    switch (first_command) {
+        .BeginMacro => |slot| {
+            testing.expectEqual(slot, 'a');
+        },
+        else => unreachable,
+    }
+
+    const second_command = command_slice[1];
+    testing.expect(std.meta.activeTag(second_command) == Command.MotionOnly);
+    switch (second_command) {
+        .MotionOnly => |command_data| {
+            switch (command_data.motion) {
+                .UntilNextWord => |words| {
+                    testing.expectEqual(words, 1);
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+
+    const third_command = command_slice[2];
+    testing.expect(std.meta.activeTag(third_command) == Command.EnterInsertMode);
+
+    const fourth_command = command_slice[3];
+    testing.expect(std.meta.activeTag(fourth_command) == Command.Insert);
+    switch (fourth_command) {
+        .Insert => |character| {
+            testing.expectEqual(character, 'b');
+        },
+        else => unreachable,
+    }
+
+    const fifth_command = command_slice[4];
+    testing.expect(std.meta.activeTag(fifth_command) == Command.ExitInsertMode);
+
+    const sixth_command = command_slice[5];
+    testing.expect(std.meta.activeTag(sixth_command) == Command.EndMacro);
 }
 
 pub fn runTests() void {}

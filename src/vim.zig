@@ -42,6 +42,8 @@ pub const Command = union(enum) {
     ScrollTop,
     ScrollCenter,
     ScrollBottom,
+    BeginMacro: u8,
+    EndMacro,
     // @TODO: add `StoreMacro` command that will mark a command sequence as being stored in a macro
     // slot/register.
     // @TODO: add `PlayMacro` command that will take a macro slot/register to play.
@@ -100,6 +102,8 @@ pub const State = union(enum) {
     WaitingForMark: CommandBuilderData,
     WaitingForGCommand: CommandBuilderData,
     WaitingForZCommand: CommandBuilderData,
+    WaitingForMacroSlot: CommandBuilderData,
+    InMacro: *State,
     // @TODO: `RecordingMacro` state that will have to contain a list of recorded commands
 };
 
@@ -115,7 +119,9 @@ pub const InsertModeData = struct {
     range_modifiers: u32 = 0,
 };
 
-pub fn handleKey(key: Key, state: *State) ?Command {
+const HandleKeyError = error{OutOfMemory};
+
+pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyError!?Command {
     switch (state.*) {
         State.Start => |*builder_data| {
             switch (key.key_code) {
@@ -204,6 +210,11 @@ pub fn handleKey(key: Key, state: *State) ?Command {
                             return null;
                         },
                     }
+                },
+                'q' => {
+                    state.* = State{ .WaitingForMacroSlot = builder_data.* };
+
+                    return null;
                 },
 
                 // @TODO: add 'C' support
@@ -294,10 +305,38 @@ pub fn handleKey(key: Key, state: *State) ?Command {
                 .ScrollTop,
                 .ScrollCenter,
                 .ScrollBottom,
+                .BeginMacro,
+                .EndMacro,
                 => std.debug.panic(
                     "Invalid command for `WaitingForMark`: {}\n",
                     builder_data.command,
                 ),
+            }
+        },
+
+        .WaitingForMacroSlot => |*builder_data| {
+            const command = Command{ .BeginMacro = key.key_code };
+            var macro_state = try allocator.create(State);
+            macro_state.* = State{ .Start = CommandBuilderData{} };
+            state.* = State{ .InMacro = macro_state };
+
+            return command;
+        },
+
+        .InMacro => |macro_state| {
+            switch (key.key_code) {
+                'q' => {
+                    const command = Command{ .EndMacro = undefined };
+                    allocator.destroy(macro_state);
+                    state.* = State{ .Start = CommandBuilderData{} };
+
+                    return command;
+                },
+                else => {
+                    const command = try handleKey(allocator, key, macro_state);
+
+                    return command;
+                },
             }
         },
 
@@ -361,6 +400,8 @@ pub fn handleKey(key: Key, state: *State) ?Command {
                 .ScrollTop,
                 .ScrollCenter,
                 .ScrollBottom,
+                .BeginMacro,
+                .EndMacro,
                 => std.debug.panic(
                     "invalid command for `WaitingForTarget`: {}\n",
                     builder_data.command,
@@ -456,6 +497,8 @@ pub fn handleKey(key: Key, state: *State) ?Command {
                 .ScrollTop,
                 .ScrollCenter,
                 .ScrollBottom,
+                .BeginMacro,
+                .EndMacro,
                 => std.debug.panic(
                     "invalid command for `WaitingForMotion`: {}\n",
                     builder_data.command,
@@ -493,7 +536,7 @@ pub fn handleKeys(allocator: *mem.Allocator, keys: []const Key, state: *State) !
     errdefer commands.deinit();
 
     for (keys) |k| {
-        if (handleKey(k, state)) |command| {
+        if (try handleKey(allocator, k, state)) |command| {
             try commands.append(command);
         }
     }
@@ -708,6 +751,8 @@ fn gCommandFromKey(character: u8, state: *State) ?Command {
                         .ScrollTop,
                         .ScrollCenter,
                         .ScrollBottom,
+                        .BeginMacro,
+                        .EndMacro,
                         => {
                             std.debug.panic("invalid g command state: {}\n", builder_data.command);
                         },
