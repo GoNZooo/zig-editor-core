@@ -44,7 +44,13 @@ pub const Command = union(enum) {
     ScrollBottom,
     // @TODO: possibly make a command type that signals that something was part of a recorded macro
     BeginMacro: u8,
-    EndMacro,
+    EndMacro: u8,
+    // CommandInMacro: CommandInMacroData,
+};
+
+const CommandInMacroData = struct {
+    slot: u8,
+    command: ?*Command,
 };
 
 /// Represents a motion that is usually attached to a `Command` (unless the command is `MotionOnly`).
@@ -121,7 +127,7 @@ pub const InsertModeData = struct {
 const HandleKeyError = error{OutOfMemory};
 
 pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyError!?Command {
-    switch (state.*) {
+    return switch (state.*) {
         State.Start => |*builder_data| {
             switch (key.key_code) {
                 '"' => {
@@ -242,77 +248,7 @@ pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyEr
             }
         },
 
-        State.WaitingForMark => |*builder_data| {
-            switch (builder_data.command) {
-                .SetMark => |*mark| {
-                    mark.* = key.key_code;
-                    const command = builder_data.command;
-                    state.* = State{ .Start = CommandBuilderData{} };
-
-                    return command;
-                },
-                .Yank, .Delete, .Change, .MotionOnly, .Comment => |*command_data| {
-                    switch (command_data.motion) {
-                        .ToMarkLine, .ToMarkPosition => |*mark| {
-                            mark.* = key.key_code;
-                            const command = builder_data.command;
-                            state.* = State{ .Start = CommandBuilderData{} };
-
-                            return command;
-                        },
-                        .BackwardsExcluding,
-                        .BackwardsIncluding,
-                        .ForwardsIncluding,
-                        .ForwardsExcluding,
-                        .UntilBeginningOfLine,
-                        .UntilColumnZero,
-                        .UntilEndOfLine,
-                        .UntilEndOfWord,
-                        .UntilNextWord,
-                        .UntilPreviousWord,
-                        .UpwardsLines,
-                        .DownwardsLines,
-                        .BackwardsParagraph,
-                        .ForwardsParagraph,
-                        .BackwardsCharacter,
-                        .ForwardsCharacter,
-                        .Unset,
-                        .Inside,
-                        .Surrounding,
-                        .UntilEndOfFile,
-                        .UntilBeginningOfFile,
-                        .ToMatching,
-                        => {
-                            std.debug.panic(
-                                "invalid motion for `WaitingForMark`: {}\n",
-                                command_data.motion,
-                            );
-                        },
-                    }
-                },
-                .PasteForwards,
-                .PasteBackwards,
-                .Unset,
-                .BringLineUp,
-                .Undo,
-                .Redo,
-                .EnterInsertMode,
-                .Insert,
-                .ExitInsertMode,
-                .ReplaceInsert,
-                .InsertDownwards,
-                .InsertUpwards,
-                .ScrollTop,
-                .ScrollCenter,
-                .ScrollBottom,
-                .BeginMacro,
-                .EndMacro,
-                => std.debug.panic(
-                    "Invalid command for `WaitingForMark`: {}\n",
-                    builder_data.command,
-                ),
-            }
-        },
+        .WaitingForMark => |*builder_data| handleWaitingForMark(builder_data, state, key),
 
         .WaitingForMacroSlot => |*builder_data| {
             const command = Command{ .BeginMacro = key.key_code };
@@ -340,76 +276,7 @@ pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyEr
             }
         },
 
-        State.WaitingForTarget => |*builder_data| {
-            switch (builder_data.command) {
-                .Delete,
-                .Yank,
-                .Change,
-                .MotionOnly,
-                .Comment,
-                => |*command_data| {
-                    switch (command_data.motion) {
-                        .ForwardsIncluding,
-                        .BackwardsIncluding,
-                        .ForwardsExcluding,
-                        .BackwardsExcluding,
-                        .Inside,
-                        .Surrounding,
-                        => |*target| {
-                            target.* = key.key_code;
-                            const command = builder_data.command;
-                            state.* = State{ .Start = CommandBuilderData{} };
-
-                            return command;
-                        },
-                        .Unset,
-                        .UntilEndOfWord,
-                        .UntilNextWord,
-                        .UntilPreviousWord,
-                        .DownwardsLines,
-                        .UpwardsLines,
-                        .ForwardsParagraph,
-                        .BackwardsParagraph,
-                        .ForwardsCharacter,
-                        .BackwardsCharacter,
-                        .UntilEndOfLine,
-                        .UntilBeginningOfLine,
-                        .UntilColumnZero,
-                        .ToMarkLine,
-                        .ToMarkPosition,
-                        .UntilEndOfFile,
-                        .UntilBeginningOfFile,
-                        .ToMatching,
-                        => std.debug.panic(
-                            "non-target motion waiting for target: {}\n",
-                            command_data.motion,
-                        ),
-                    }
-                },
-                .PasteForwards,
-                .PasteBackwards,
-                .SetMark,
-                .BringLineUp,
-                .Undo,
-                .Redo,
-                .EnterInsertMode,
-                .Insert,
-                .ExitInsertMode,
-                .ReplaceInsert,
-                .InsertDownwards,
-                .InsertUpwards,
-                .ScrollTop,
-                .ScrollCenter,
-                .ScrollBottom,
-                .BeginMacro,
-                .EndMacro,
-                => std.debug.panic(
-                    "invalid command for `WaitingForTarget`: {}\n",
-                    builder_data.command,
-                ),
-                .Unset => std.debug.panic("no command set when waiting for target"),
-            }
-        },
+        State.WaitingForTarget => |*builder_data| handleWaitingForTarget(builder_data, state, key),
 
         State.WaitingForMotion => |*builder_data| {
             switch (builder_data.command) {
@@ -529,7 +396,7 @@ pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyEr
                 },
             };
         },
-    }
+    };
 }
 
 pub fn handleKeys(allocator: *mem.Allocator, keys: []const Key, state: *State) !ArrayList(Command) {
@@ -878,4 +745,76 @@ fn handleWaitingForMark(builder_data: *CommandBuilderData, state: *State, key: K
         ),
     };
 }
+
+fn handleWaitingForTarget(builder_data: *CommandBuilderData, state: *State, key: Key) ?Command {
+    switch (builder_data.command) {
+        .Delete,
+        .Yank,
+        .Change,
+        .MotionOnly,
+        .Comment,
+        => |*command_data| {
+            switch (command_data.motion) {
+                .ForwardsIncluding,
+                .BackwardsIncluding,
+                .ForwardsExcluding,
+                .BackwardsExcluding,
+                .Inside,
+                .Surrounding,
+                => |*target| {
+                    target.* = key.key_code;
+                    const command = builder_data.command;
+                    state.* = State{ .Start = CommandBuilderData{} };
+
+                    return command;
+                },
+                .Unset,
+                .UntilEndOfWord,
+                .UntilNextWord,
+                .UntilPreviousWord,
+                .DownwardsLines,
+                .UpwardsLines,
+                .ForwardsParagraph,
+                .BackwardsParagraph,
+                .ForwardsCharacter,
+                .BackwardsCharacter,
+                .UntilEndOfLine,
+                .UntilBeginningOfLine,
+                .UntilColumnZero,
+                .ToMarkLine,
+                .ToMarkPosition,
+                .UntilEndOfFile,
+                .UntilBeginningOfFile,
+                .ToMatching,
+                => std.debug.panic(
+                    "non-target motion waiting for target: {}\n",
+                    command_data.motion,
+                ),
+            }
+        },
+        .PasteForwards,
+        .PasteBackwards,
+        .SetMark,
+        .BringLineUp,
+        .Undo,
+        .Redo,
+        .EnterInsertMode,
+        .Insert,
+        .ExitInsertMode,
+        .ReplaceInsert,
+        .InsertDownwards,
+        .InsertUpwards,
+        .ScrollTop,
+        .ScrollCenter,
+        .ScrollBottom,
+        .BeginMacro,
+        .EndMacro,
+        => std.debug.panic(
+            "invalid command for `WaitingForTarget`: {}\n",
+            builder_data.command,
+        ),
+        .Unset => std.debug.panic("no command set when waiting for target"),
+    }
+}
+
 pub const ESCAPE_KEY = Key{ .key_code = '\x1b' };
