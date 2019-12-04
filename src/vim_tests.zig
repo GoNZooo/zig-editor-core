@@ -2077,6 +2077,12 @@ test "`qawibC-[q` = 'record macro into 'a'; insert 'b', escape'" {
 
     const sixth_command = command_slice[5];
     testing.expect(std.meta.activeTag(sixth_command) == Command.EndMacro);
+    switch (sixth_command) {
+        .EndMacro => |end_macro_data| {
+            testing.expectEqual(end_macro_data.commands.len, 4);
+        },
+        else => unreachable,
+    }
 }
 
 pub fn runTests() void {}

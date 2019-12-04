@@ -42,15 +42,13 @@ pub const Command = union(enum) {
     ScrollTop,
     ScrollCenter,
     ScrollBottom,
-    // @TODO: possibly make a command type that signals that something was part of a recorded macro
     BeginMacro: u8,
-    EndMacro: u8,
-    // CommandInMacro: CommandInMacroData,
+    EndMacro: EndMacroData,
 };
 
-const CommandInMacroData = struct {
+const EndMacroData = struct {
     slot: u8,
-    command: ?*Command,
+    commands: []Command,
 };
 
 /// Represents a motion that is usually attached to a `Command` (unless the command is `MotionOnly`).
@@ -107,9 +105,14 @@ pub const State = union(enum) {
     WaitingForMark: CommandBuilderData,
     WaitingForGCommand: CommandBuilderData,
     WaitingForZCommand: CommandBuilderData,
-    // @TODO: come up with a better system for recording macros, not requiring nested states.
     WaitingForMacroSlot: CommandBuilderData,
-    InMacro: *State,
+    RecordingMacro: RecordingMacroData,
+};
+
+const RecordingMacroData = struct {
+    slot: u8,
+    state: *State,
+    commands: ArrayList(Command),
 };
 
 pub const CommandBuilderData = struct {
@@ -147,23 +150,38 @@ pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyEr
         .WaitingForMacroSlot => |*builder_data| {
             const command = Command{ .BeginMacro = key.key_code };
             var macro_state = try allocator.create(State);
+            var commands = ArrayList(Command).init(allocator);
             macro_state.* = State{ .Start = CommandBuilderData{} };
-            state.* = State{ .InMacro = macro_state };
+            state.* = State{
+                .RecordingMacro = RecordingMacroData{
+                    .slot = key.key_code,
+                    .state = macro_state,
+                    .commands = commands,
+                },
+            };
 
             return command;
         },
 
-        .InMacro => |macro_state| {
+        .RecordingMacro => |*in_macro_data| {
             switch (key.key_code) {
                 'q' => {
-                    const command = Command{ .EndMacro = undefined };
-                    allocator.destroy(macro_state);
+                    const command = Command{
+                        .EndMacro = EndMacroData{
+                            .slot = in_macro_data.slot,
+                            .commands = in_macro_data.commands.toSliceConst(),
+                        },
+                    };
+                    allocator.destroy(in_macro_data.state);
                     state.* = State{ .Start = CommandBuilderData{} };
 
                     return command;
                 },
                 else => {
-                    const command = try handleKey(allocator, key, macro_state);
+                    const command = try handleKey(allocator, key, in_macro_data.state);
+                    if (command) |c| {
+                        try in_macro_data.commands.append(c);
+                    }
 
                     return command;
                 },
