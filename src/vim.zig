@@ -172,102 +172,7 @@ pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyEr
 
         State.WaitingForTarget => |*builder_data| handleWaitingForTarget(builder_data, state, key),
 
-        State.WaitingForMotion => |*builder_data| {
-            switch (builder_data.command) {
-                .Delete, .Yank, .Change, .Comment => |*command_data| {
-                    switch (key.key_code) {
-                        '1'...'9' => {
-                            const numeric_value = key.key_code - '0';
-                            if (builder_data.range) |*range| {
-                                range.* *= 10;
-                                range.* += numeric_value;
-                            } else {
-                                builder_data.range = numeric_value;
-                            }
-                            builder_data.range_modifiers += 1;
-
-                            return null;
-                        },
-                        '0' => {
-                            if (builder_data.range) |*range| {
-                                range.* *= 10;
-
-                                return null;
-                            } else {
-                                command_data.motion = motionFromKey(key, builder_data.*);
-                                const command = builder_data.command;
-                                state.* = State{ .Start = CommandBuilderData{} };
-
-                                return command;
-                            }
-                        },
-                        'd',
-                        'y',
-                        'e',
-                        'w',
-                        'j',
-                        'k',
-                        '$',
-                        '^',
-                        'c',
-                        '{',
-                        '}',
-                        'l',
-                        'h',
-                        'G',
-                        '%',
-                        => {
-                            command_data.motion = motionFromKey(key, builder_data.*);
-                            const command = builder_data.command;
-                            state.* = State{ .Start = CommandBuilderData{} };
-
-                            return command;
-                        },
-                        'f', 'F', 't', 'T', 'i', 's' => {
-                            command_data.motion = motionFromKey(key, builder_data.*);
-                            state.* = State{ .WaitingForTarget = builder_data.* };
-
-                            return null;
-                        },
-                        '`', '\'' => {
-                            command_data.motion = motionFromKey(key, builder_data.*);
-                            state.* = State{ .WaitingForMark = builder_data.* };
-
-                            return null;
-                        },
-                        'g' => {
-                            state.* = State{ .WaitingForGCommand = builder_data.* };
-
-                            return null;
-                        },
-                        else => std.debug.panic("unimplemented motion: {c}\n", key.key_code),
-                    }
-                },
-                .PasteForwards,
-                .PasteBackwards,
-                .MotionOnly,
-                .SetMark,
-                .BringLineUp,
-                .Undo,
-                .Redo,
-                .EnterInsertMode,
-                .Insert,
-                .ExitInsertMode,
-                .ReplaceInsert,
-                .InsertDownwards,
-                .InsertUpwards,
-                .ScrollTop,
-                .ScrollCenter,
-                .ScrollBottom,
-                .BeginMacro,
-                .EndMacro,
-                => std.debug.panic(
-                    "invalid command for `WaitingForMotion`: {}\n",
-                    builder_data.command,
-                ),
-                .Unset => std.debug.panic("no command when waiting for motion"),
-            }
-        },
+        State.WaitingForMotion => |*builder_data| handleWaitingForMotion(builder_data, state, key),
 
         State.WaitingForGCommand => |*builder_data| {
             return gCommandFromKey(key, state);
@@ -816,6 +721,103 @@ fn handleWaitingForTarget(builder_data: *CommandBuilderData, state: *State, key:
             builder_data.command,
         ),
         .Unset => std.debug.panic("no command set when waiting for target"),
+    }
+}
+
+fn handleWaitingForMotion(builder_data: *CommandBuilderData, state: *State, key: Key) ?Command {
+    switch (builder_data.command) {
+        .Delete, .Yank, .Change, .Comment => |*command_data| {
+            switch (key.key_code) {
+                '1'...'9' => {
+                    const numeric_value = key.key_code - '0';
+                    if (builder_data.range) |*range| {
+                        range.* *= 10;
+                        range.* += numeric_value;
+                    } else {
+                        builder_data.range = numeric_value;
+                    }
+                    builder_data.range_modifiers += 1;
+
+                    return null;
+                },
+                '0' => {
+                    if (builder_data.range) |*range| {
+                        range.* *= 10;
+
+                        return null;
+                    } else {
+                        command_data.motion = motionFromKey(key, builder_data.*);
+                        const command = builder_data.command;
+                        state.* = State{ .Start = CommandBuilderData{} };
+
+                        return command;
+                    }
+                },
+                'd',
+                'y',
+                'e',
+                'w',
+                'j',
+                'k',
+                '$',
+                '^',
+                'c',
+                '{',
+                '}',
+                'l',
+                'h',
+                'G',
+                '%',
+                => {
+                    command_data.motion = motionFromKey(key, builder_data.*);
+                    const command = builder_data.command;
+                    state.* = State{ .Start = CommandBuilderData{} };
+
+                    return command;
+                },
+                'f', 'F', 't', 'T', 'i', 's' => {
+                    command_data.motion = motionFromKey(key, builder_data.*);
+                    state.* = State{ .WaitingForTarget = builder_data.* };
+
+                    return null;
+                },
+                '`', '\'' => {
+                    command_data.motion = motionFromKey(key, builder_data.*);
+                    state.* = State{ .WaitingForMark = builder_data.* };
+
+                    return null;
+                },
+                'g' => {
+                    state.* = State{ .WaitingForGCommand = builder_data.* };
+
+                    return null;
+                },
+                else => std.debug.panic("unimplemented motion: {c}\n", key.key_code),
+            }
+        },
+        .PasteForwards,
+        .PasteBackwards,
+        .MotionOnly,
+        .SetMark,
+        .BringLineUp,
+        .Undo,
+        .Redo,
+        .EnterInsertMode,
+        .Insert,
+        .ExitInsertMode,
+        .ReplaceInsert,
+        .InsertDownwards,
+        .InsertUpwards,
+        .ScrollTop,
+        .ScrollCenter,
+        .ScrollBottom,
+        .BeginMacro,
+        .EndMacro,
+        => std.debug.panic(
+            "invalid command for `WaitingForMotion`: {}\n",
+            builder_data.command,
+        ),
+        .Unset => std.debug.panic("no command when waiting for motion"),
     }
 }
 
