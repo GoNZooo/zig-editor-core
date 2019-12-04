@@ -128,113 +128,7 @@ const HandleKeyError = error{OutOfMemory};
 
 pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyError!?Command {
     return switch (state.*) {
-        State.Start => |*builder_data| {
-            switch (key.key_code) {
-                '"' => {
-                    state.* = State{ .WaitingForRegisterCharacter = builder_data.* };
-
-                    return null;
-                },
-                '0'...'9' => {
-                    const numeric_value = key.key_code - '0';
-                    if (builder_data.range) |*range| {
-                        range.* *= 10;
-                        range.* += numeric_value;
-                    } else {
-                        builder_data.range = numeric_value;
-                    }
-                    builder_data.range_modifiers += 1;
-
-                    return null;
-                },
-                'd', 'y', 'c' => {
-                    builder_data.command = commandFromKey(
-                        key,
-                        builder_data.register,
-                        builder_data.range,
-                    );
-                    state.* = State{ .WaitingForMotion = builder_data.* };
-
-                    return null;
-                },
-                'm', '\'', '`' => {
-                    builder_data.command = commandFromKey(
-                        key,
-                        builder_data.register,
-                        builder_data.range,
-                    );
-                    state.* = State{ .WaitingForMark = builder_data.* };
-
-                    return null;
-                },
-                'p', 'P', 'j', 'k', '$', '^', '{', '}', 'l', 'h', 'G', 'J', 'u', 'w', 'b' => {
-                    const command = commandFromKey(
-                        key,
-                        builder_data.register,
-                        builder_data.range,
-                    );
-                    state.* = State{ .Start = CommandBuilderData{} };
-
-                    return command;
-                },
-                'f', 'F', 't', 'T' => {
-                    builder_data.command = commandFromKey(
-                        key,
-                        builder_data.register,
-                        builder_data.range,
-                    );
-                    state.* = State{ .WaitingForTarget = builder_data.* };
-
-                    return null;
-                },
-                'g' => {
-                    state.* = State{ .WaitingForGCommand = builder_data.* };
-
-                    return null;
-                },
-                'z' => {
-                    state.* = State{ .WaitingForZCommand = builder_data.* };
-
-                    return null;
-                },
-                'i', 's', 'o', 'O' => {
-                    const command = commandFromKey(key, builder_data.register, builder_data.range);
-                    state.* = State{ .InInsertMode = InsertModeData{} };
-
-                    return command;
-                },
-                'r' => {
-                    const command = commandFromKey(key, builder_data.register, builder_data.range);
-                    switch (command) {
-                        Command.Redo => {
-                            state.* = State{ .Start = CommandBuilderData{} };
-
-                            return command;
-                        },
-                        else => {
-                            return null;
-                        },
-                    }
-                },
-                'q' => {
-                    state.* = State{ .WaitingForMacroSlot = builder_data.* };
-
-                    return null;
-                },
-
-                // @TODO: add 'C' support
-                // Needs to support range + registers
-
-                // @TODO: add 'D' support
-                // Needs to support range + registers
-                // Interestingly VSCodeVim does not support ranges for `D` though Vim does
-
-                else => std.debug.panic(
-                    "Not expecting character '{c}', waiting for command or range modifier",
-                    key.key_code,
-                ),
-            }
-        },
+        State.Start => |*builder_data| handleStart(builder_data, state, key),
 
         State.WaitingForRegisterCharacter => |*builder_data| {
             switch (key.key_code) {
@@ -674,6 +568,114 @@ fn zCommandFromKey(key: Key, state: *State) ?Command {
         },
         else => unreachable,
     };
+}
+
+fn handleStart(builder_data: *CommandBuilderData, state: *State, key: Key) ?Command {
+    switch (key.key_code) {
+        '"' => {
+            state.* = State{ .WaitingForRegisterCharacter = builder_data.* };
+
+            return null;
+        },
+        '0'...'9' => {
+            const numeric_value = key.key_code - '0';
+            if (builder_data.range) |*range| {
+                range.* *= 10;
+                range.* += numeric_value;
+            } else {
+                builder_data.range = numeric_value;
+            }
+            builder_data.range_modifiers += 1;
+
+            return null;
+        },
+        'd', 'y', 'c' => {
+            builder_data.command = commandFromKey(
+                key,
+                builder_data.register,
+                builder_data.range,
+            );
+            state.* = State{ .WaitingForMotion = builder_data.* };
+
+            return null;
+        },
+        'm', '\'', '`' => {
+            builder_data.command = commandFromKey(
+                key,
+                builder_data.register,
+                builder_data.range,
+            );
+            state.* = State{ .WaitingForMark = builder_data.* };
+
+            return null;
+        },
+        'p', 'P', 'j', 'k', '$', '^', '{', '}', 'l', 'h', 'G', 'J', 'u', 'w', 'b' => {
+            const command = commandFromKey(
+                key,
+                builder_data.register,
+                builder_data.range,
+            );
+            state.* = State{ .Start = CommandBuilderData{} };
+
+            return command;
+        },
+        'f', 'F', 't', 'T' => {
+            builder_data.command = commandFromKey(
+                key,
+                builder_data.register,
+                builder_data.range,
+            );
+            state.* = State{ .WaitingForTarget = builder_data.* };
+
+            return null;
+        },
+        'g' => {
+            state.* = State{ .WaitingForGCommand = builder_data.* };
+
+            return null;
+        },
+        'z' => {
+            state.* = State{ .WaitingForZCommand = builder_data.* };
+
+            return null;
+        },
+        'i', 's', 'o', 'O' => {
+            const command = commandFromKey(key, builder_data.register, builder_data.range);
+            state.* = State{ .InInsertMode = InsertModeData{} };
+
+            return command;
+        },
+        'r' => {
+            const command = commandFromKey(key, builder_data.register, builder_data.range);
+            switch (command) {
+                Command.Redo => {
+                    state.* = State{ .Start = CommandBuilderData{} };
+
+                    return command;
+                },
+                else => {
+                    return null;
+                },
+            }
+        },
+        'q' => {
+            state.* = State{ .WaitingForMacroSlot = builder_data.* };
+
+            return null;
+        },
+
+        // @TODO: add 'C' support
+        // Needs to support range + registers
+
+        // @TODO: add 'D' support
+        // Needs to support range + registers
+        // Interestingly VSCodeVim does not support ranges for `D` though Vim does
+
+        else => std.debug.panic(
+            "Not expecting character '{c}', waiting for command or range modifier",
+            key.key_code,
+        ),
+    }
 }
 
 fn handleWaitingForMark(builder_data: *CommandBuilderData, state: *State, key: Key) ?Command {
