@@ -129,6 +129,10 @@ pub const InsertModeData = struct {
 
 const HandleKeyError = error{OutOfMemory};
 
+/// Handles a key for a given input state.
+/// Because a list of commands can be accumulated across several calls of this an allocator is
+/// needed for the commands that are being recorded. If a `EndMacro` command is returned the caller
+/// is responsible for freeing the associated command list when they no longer care about it.
 pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyError!?Command {
     return switch (state.*) {
         State.Start => |*builder_data| handleStart(builder_data, state, key),
@@ -172,6 +176,8 @@ pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyEr
                             .commands = in_macro_data.commands.toSliceConst(),
                         },
                     };
+                    // We destroy only the intermediate macro data state because it's internal.
+                    // The command list that has been recorded will have to be freed by the user.
                     allocator.destroy(in_macro_data.state);
                     state.* = State{ .Start = CommandBuilderData{} };
 
