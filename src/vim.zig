@@ -809,4 +809,73 @@ fn zCommandFromKey(key: Key, state: *State) ?Command {
     };
 }
 
+fn handleWaitingForMark(builder_data: *CommandBuilderData, state: *State, key: Key) ?Command {
+    return switch (builder_data.command) {
+        .SetMark => |*mark| {
+            mark.* = key.key_code;
+            const command = builder_data.command;
+            state.* = State{ .Start = CommandBuilderData{} };
+
+            return command;
+        },
+        .Yank, .Delete, .Change, .MotionOnly, .Comment => |*command_data| {
+            switch (command_data.motion) {
+                .ToMarkLine, .ToMarkPosition => |*mark| {
+                    mark.* = key.key_code;
+                    const command = builder_data.command;
+                    state.* = State{ .Start = CommandBuilderData{} };
+
+                    return command;
+                },
+                .BackwardsExcluding,
+                .BackwardsIncluding,
+                .ForwardsIncluding,
+                .ForwardsExcluding,
+                .UntilBeginningOfLine,
+                .UntilColumnZero,
+                .UntilEndOfLine,
+                .UntilEndOfWord,
+                .UntilNextWord,
+                .UntilPreviousWord,
+                .UpwardsLines,
+                .DownwardsLines,
+                .BackwardsParagraph,
+                .ForwardsParagraph,
+                .BackwardsCharacter,
+                .ForwardsCharacter,
+                .Unset,
+                .Inside,
+                .Surrounding,
+                .UntilEndOfFile,
+                .UntilBeginningOfFile,
+                .ToMatching,
+                => std.debug.panic(
+                    "invalid motion for `WaitingForMark`: {}\n",
+                    command_data.motion,
+                ),
+            }
+        },
+        .PasteForwards,
+        .PasteBackwards,
+        .Unset,
+        .BringLineUp,
+        .Undo,
+        .Redo,
+        .EnterInsertMode,
+        .Insert,
+        .ExitInsertMode,
+        .ReplaceInsert,
+        .InsertDownwards,
+        .InsertUpwards,
+        .ScrollTop,
+        .ScrollCenter,
+        .ScrollBottom,
+        .BeginMacro,
+        .EndMacro,
+        => std.debug.panic(
+            "Invalid command for `WaitingForMark`: {}\n",
+            builder_data.command,
+        ),
+    };
+}
 pub const ESCAPE_KEY = Key{ .key_code = '\x1b' };
