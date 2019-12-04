@@ -126,7 +126,26 @@ pub const InsertModeData = struct {
     range_modifiers: u32 = 0,
 };
 
-const HandleKeyError = error{OutOfMemory};
+const HandleKeyError = error{
+    OutOfMemory,
+    UnknownMacroSlot,
+    NoCommandWhenWaitingForMotion,
+    NoCommandWhenWaitingForTarget,
+    UnimplementedMotion,
+    UnsupportedLeftControlCommand,
+    UnsupportedCommand,
+    UnsupportedMotion,
+    UnsupportedGCommand,
+    UnsupportedZCommand,
+    UnexpectedStartKey,
+    UnknownRegister,
+    InvalidWaitingForMarkCommand,
+    InvalidWaitingForMarkMotion,
+    InvalidWaitingForMotionCommand,
+    InvalidWaitingForTargetMotion,
+    InvalidWaitingForTargetCommand,
+    InvalidGCommandState,
+};
 
 /// Handles a key for a given input state.
 /// Because a list of commands can be accumulated across several calls of this an allocator is
@@ -134,7 +153,7 @@ const HandleKeyError = error{OutOfMemory};
 /// caller is responsible for freeing the associated command list when they no longer care about it.
 pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyError!?Command {
     return switch (state.*) {
-        State.Start => |*builder_data| handleStart(builder_data, state, key),
+        State.Start => |*builder_data| try handleStart(builder_data, state, key),
 
         State.WaitingForRegister => |*builder_data| {
             switch (key.key_code) {
@@ -144,11 +163,15 @@ pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyEr
 
                     return null;
                 },
-                else => std.debug.panic("unknown register: {}\n", key.key_code),
+                else => {
+                    debugPanic("unknown register: {}\n", key.key_code);
+
+                    return error.UnknownRegister;
+                },
             }
         },
 
-        .WaitingForMark => |*builder_data| handleWaitingForMark(builder_data, state, key),
+        .WaitingForMark => |*builder_data| try handleWaitingForMark(builder_data, state, key),
 
         .WaitingForSlot => |*builder_data| try handleWaitingForSlot(
             allocator,
@@ -184,16 +207,24 @@ pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyEr
             }
         },
 
-        State.WaitingForTarget => |*builder_data| handleWaitingForTarget(builder_data, state, key),
+        State.WaitingForTarget => |*builder_data| try handleWaitingForTarget(
+            builder_data,
+            state,
+            key,
+        ),
 
-        State.WaitingForMotion => |*builder_data| handleWaitingForMotion(builder_data, state, key),
+        State.WaitingForMotion => |*builder_data| try handleWaitingForMotion(
+            builder_data,
+            state,
+            key,
+        ),
 
         State.WaitingForGCommand => |*builder_data| {
-            return gCommandFromKey(key, state);
+            return try gCommandFromKey(key, state);
         },
 
         State.WaitingForZCommand => |*builder_data| {
-            return zCommandFromKey(key, state);
+            return try zCommandFromKey(key, state);
         },
 
         State.InInsertMode => |*insert_mode_data| {
@@ -225,11 +256,15 @@ pub fn handleKeys(allocator: *mem.Allocator, keys: []const Key, state: *State) !
     return commands;
 }
 
-fn commandFromKey(key: Key, register: ?u8, range: ?u32) Command {
+fn commandFromKey(key: Key, register: ?u8, range: ?u32) !Command {
     if (key.left_control) {
         return switch (key.key_code) {
-            'r' => Command.Redo,
-            else => std.debug.panic("unsupported command key with left control: {}\n", key.key_code),
+            'r' => Command{ .Redo = undefined },
+            else => err: {
+                debugPanic("unsupported command key with left control: {}\n", key.key_code);
+
+                break :err error.UnsupportedLeftControlCommand;
+            },
         };
     }
 
@@ -357,7 +392,7 @@ fn commandFromKey(key: Key, register: ?u8, range: ?u32) Command {
             },
         },
         'J' => Command{ .BringLineUp = range orelse 1 },
-        'u' => Command.Undo,
+        'u' => Command{ .Undo = undefined },
         'i' => Command{ .EnterInsertMode = range orelse 1 },
         's' => Command{
             .ReplaceInsert = ReplaceInsertData{
@@ -367,11 +402,15 @@ fn commandFromKey(key: Key, register: ?u8, range: ?u32) Command {
         },
         'o' => Command{ .InsertDownwards = range orelse 1 },
         'O' => Command{ .InsertUpwards = range orelse 1 },
-        else => std.debug.panic("unsupported command key: {}\n", key.key_code),
+        else => {
+            debugPanic("unsupported command key: {}\n", key.key_code);
+
+            return error.UnsupportedCommand;
+        },
     };
 }
 
-fn motionFromKey(key: Key, builder_data: CommandBuilderData) Motion {
+fn motionFromKey(key: Key, builder_data: CommandBuilderData) !Motion {
     return switch (key.key_code) {
         'd', 'y', 'c' => Motion{ .DownwardsLines = if (builder_data.range) |r| (r - 1) else 0 },
         'e' => Motion{ .UntilEndOfWord = builder_data.range orelse 1 },
@@ -386,7 +425,7 @@ fn motionFromKey(key: Key, builder_data: CommandBuilderData) Motion {
         'T' => Motion{ .BackwardsExcluding = null },
         '}' => Motion{ .ForwardsParagraph = builder_data.range orelse 1 },
         '{' => Motion{ .BackwardsParagraph = builder_data.range orelse 1 },
-        '0' => Motion.UntilColumnZero,
+        '0' => Motion{ .UntilColumnZero = undefined },
         'l' => Motion{ .ForwardsCharacter = builder_data.range orelse 1 },
         'h' => Motion{ .BackwardsCharacter = builder_data.range orelse 1 },
         '`' => Motion{ .ToMarkPosition = null },
@@ -394,12 +433,16 @@ fn motionFromKey(key: Key, builder_data: CommandBuilderData) Motion {
         'i' => Motion{ .Inside = null },
         's' => Motion{ .Surrounding = null },
         'G' => Motion{ .UntilEndOfFile = builder_data.range orelse 0 },
-        '%' => Motion.ToMatching,
-        else => std.debug.panic("unsupported motion: {c}\n", key.key_code),
+        '%' => Motion{ .ToMatching = undefined },
+        else => {
+            debugPanic("unsupported motion: {c}\n", key.key_code);
+
+            return error.UnsupportedMotion;
+        },
     };
 }
 
-fn gCommandFromKey(key: Key, state: *State) ?Command {
+fn gCommandFromKey(key: Key, state: *State) !?Command {
     return switch (state.*) {
         .WaitingForGCommand => |*builder_data| outer: {
             switch (key.key_code) {
@@ -439,7 +482,9 @@ fn gCommandFromKey(key: Key, state: *State) ?Command {
                         .BeginMacro,
                         .EndMacro,
                         => {
-                            std.debug.panic("invalid g command state: {}\n", builder_data.command);
+                            debugPanic("invalid g command state: {}\n", builder_data.command);
+
+                            return error.InvalidGCommandState;
                         },
                     }
 
@@ -456,14 +501,18 @@ fn gCommandFromKey(key: Key, state: *State) ?Command {
 
                     break :outer null;
                 },
-                else => std.debug.panic("unsupported G command: {c}\n", key.key_code),
+                else => {
+                    debugPanic("unsupported G command: {c}\n", key.key_code);
+
+                    return error.UnsupportedGCommand;
+                },
             }
         },
         else => unreachable,
     };
 }
 
-fn zCommandFromKey(key: Key, state: *State) ?Command {
+fn zCommandFromKey(key: Key, state: *State) !?Command {
     return switch (state.*) {
         .WaitingForZCommand => |*builder_data| outer: {
             switch (key.key_code) {
@@ -482,14 +531,17 @@ fn zCommandFromKey(key: Key, state: *State) ?Command {
 
                     break :outer Command{ .ScrollBottom = undefined };
                 },
-                else => std.debug.panic("unsupported Z command: {c}\n", key.key_code),
+                else => {
+                    debugPanic("unsupported Z command: {c}\n", key.key_code);
+                    return error.UnsupportedZCommand;
+                },
             }
         },
         else => unreachable,
     };
 }
 
-fn handleStart(builder_data: *CommandBuilderData, state: *State, key: Key) ?Command {
+fn handleStart(builder_data: *CommandBuilderData, state: *State, key: Key) !?Command {
     switch (key.key_code) {
         '"' => {
             state.* = State{ .WaitingForRegister = builder_data.* };
@@ -509,7 +561,7 @@ fn handleStart(builder_data: *CommandBuilderData, state: *State, key: Key) ?Comm
             return null;
         },
         'd', 'y', 'c' => {
-            builder_data.command = commandFromKey(
+            builder_data.command = try commandFromKey(
                 key,
                 builder_data.register,
                 builder_data.range,
@@ -519,7 +571,7 @@ fn handleStart(builder_data: *CommandBuilderData, state: *State, key: Key) ?Comm
             return null;
         },
         'm', '\'', '`' => {
-            builder_data.command = commandFromKey(
+            builder_data.command = try commandFromKey(
                 key,
                 builder_data.register,
                 builder_data.range,
@@ -529,7 +581,7 @@ fn handleStart(builder_data: *CommandBuilderData, state: *State, key: Key) ?Comm
             return null;
         },
         'p', 'P', 'j', 'k', '$', '^', '{', '}', 'l', 'h', 'G', 'J', 'u', 'w', 'b' => {
-            const command = commandFromKey(
+            const command = try commandFromKey(
                 key,
                 builder_data.register,
                 builder_data.range,
@@ -539,7 +591,7 @@ fn handleStart(builder_data: *CommandBuilderData, state: *State, key: Key) ?Comm
             return command;
         },
         'f', 'F', 't', 'T' => {
-            builder_data.command = commandFromKey(
+            builder_data.command = try commandFromKey(
                 key,
                 builder_data.register,
                 builder_data.range,
@@ -559,13 +611,13 @@ fn handleStart(builder_data: *CommandBuilderData, state: *State, key: Key) ?Comm
             return null;
         },
         'i', 's', 'o', 'O' => {
-            const command = commandFromKey(key, builder_data.register, builder_data.range);
+            const command = try commandFromKey(key, builder_data.register, builder_data.range);
             state.* = State{ .InInsertMode = InsertModeData{} };
 
             return command;
         },
         'r' => {
-            const command = commandFromKey(key, builder_data.register, builder_data.range);
+            const command = try commandFromKey(key, builder_data.register, builder_data.range);
             switch (command) {
                 Command.Redo => {
                     state.* = State{ .Start = CommandBuilderData{} };
@@ -590,14 +642,18 @@ fn handleStart(builder_data: *CommandBuilderData, state: *State, key: Key) ?Comm
         // Needs to support range + registers
         // Interestingly VSCodeVim does not support ranges for `D` though Vim does
 
-        else => std.debug.panic(
-            "Not expecting character '{c}', waiting for command or range modifier",
-            key.key_code,
-        ),
+        else => {
+            debugPanic(
+                "Not expecting character '{c}', waiting for command or range modifier",
+                key.key_code,
+            );
+
+            return error.UnexpectedStartKey;
+        },
     }
 }
 
-fn handleWaitingForMark(builder_data: *CommandBuilderData, state: *State, key: Key) ?Command {
+fn handleWaitingForMark(builder_data: *CommandBuilderData, state: *State, key: Key) !?Command {
     return switch (builder_data.command) {
         .SetMark => |*mark| {
             mark.* = key.key_code;
@@ -637,10 +693,14 @@ fn handleWaitingForMark(builder_data: *CommandBuilderData, state: *State, key: K
                 .UntilEndOfFile,
                 .UntilBeginningOfFile,
                 .ToMatching,
-                => std.debug.panic(
-                    "invalid motion for `WaitingForMark`: {}\n",
-                    command_data.motion,
-                ),
+                => {
+                    debugPanic(
+                        "invalid motion for `WaitingForMark`: {}\n",
+                        command_data.motion,
+                    );
+
+                    return error.InvalidWaitingForMarkMotion;
+                },
             }
         },
         .PasteForwards,
@@ -660,14 +720,18 @@ fn handleWaitingForMark(builder_data: *CommandBuilderData, state: *State, key: K
         .ScrollBottom,
         .BeginMacro,
         .EndMacro,
-        => std.debug.panic(
-            "Invalid command for `WaitingForMark`: {}\n",
-            builder_data.command,
-        ),
+        => {
+            debugPanic(
+                "Invalid command for `WaitingForMark`: {}\n",
+                builder_data.command,
+            );
+
+            return error.InvalidWaitingForMarkCommand;
+        },
     };
 }
 
-fn handleWaitingForTarget(builder_data: *CommandBuilderData, state: *State, key: Key) ?Command {
+fn handleWaitingForTarget(builder_data: *CommandBuilderData, state: *State, key: Key) !?Command {
     switch (builder_data.command) {
         .Delete,
         .Yank,
@@ -707,10 +771,14 @@ fn handleWaitingForTarget(builder_data: *CommandBuilderData, state: *State, key:
                 .UntilEndOfFile,
                 .UntilBeginningOfFile,
                 .ToMatching,
-                => std.debug.panic(
-                    "non-target motion waiting for target: {}\n",
-                    command_data.motion,
-                ),
+                => {
+                    debugPanic(
+                        "non-target motion waiting for target: {}\n",
+                        command_data.motion,
+                    );
+
+                    return error.InvalidWaitingForTargetMotion;
+                },
             }
         },
         .PasteForwards,
@@ -730,15 +798,23 @@ fn handleWaitingForTarget(builder_data: *CommandBuilderData, state: *State, key:
         .ScrollBottom,
         .BeginMacro,
         .EndMacro,
-        => std.debug.panic(
-            "invalid command for `WaitingForTarget`: {}\n",
-            builder_data.command,
-        ),
-        .Unset => std.debug.panic("no command set when waiting for target"),
+        => {
+            debugPanic(
+                "invalid command for `WaitingForTarget`: {}\n",
+                builder_data.command,
+            );
+
+            return error.InvalidWaitingForTargetCommand;
+        },
+        .Unset => {
+            debugPanic("no command set when waiting for target");
+
+            return error.NoCommandWhenWaitingForTarget;
+        },
     }
 }
 
-fn handleWaitingForMotion(builder_data: *CommandBuilderData, state: *State, key: Key) ?Command {
+fn handleWaitingForMotion(builder_data: *CommandBuilderData, state: *State, key: Key) !?Command {
     switch (builder_data.command) {
         .Delete, .Yank, .Change, .Comment => |*command_data| {
             switch (key.key_code) {
@@ -760,7 +836,7 @@ fn handleWaitingForMotion(builder_data: *CommandBuilderData, state: *State, key:
 
                         return null;
                     } else {
-                        command_data.motion = motionFromKey(key, builder_data.*);
+                        command_data.motion = try motionFromKey(key, builder_data.*);
                         const command = builder_data.command;
                         state.* = State{ .Start = CommandBuilderData{} };
 
@@ -783,20 +859,20 @@ fn handleWaitingForMotion(builder_data: *CommandBuilderData, state: *State, key:
                 'G',
                 '%',
                 => {
-                    command_data.motion = motionFromKey(key, builder_data.*);
+                    command_data.motion = try motionFromKey(key, builder_data.*);
                     const command = builder_data.command;
                     state.* = State{ .Start = CommandBuilderData{} };
 
                     return command;
                 },
                 'f', 'F', 't', 'T', 'i', 's' => {
-                    command_data.motion = motionFromKey(key, builder_data.*);
+                    command_data.motion = try motionFromKey(key, builder_data.*);
                     state.* = State{ .WaitingForTarget = builder_data.* };
 
                     return null;
                 },
                 '`', '\'' => {
-                    command_data.motion = motionFromKey(key, builder_data.*);
+                    command_data.motion = try motionFromKey(key, builder_data.*);
                     state.* = State{ .WaitingForMark = builder_data.* };
 
                     return null;
@@ -806,7 +882,11 @@ fn handleWaitingForMotion(builder_data: *CommandBuilderData, state: *State, key:
 
                     return null;
                 },
-                else => std.debug.panic("unimplemented motion: {c}\n", key.key_code),
+                else => {
+                    debugPanic("unimplemented motion: {c}\n", key.key_code);
+
+                    return error.UnimplementedMotion;
+                },
             }
         },
         .PasteForwards,
@@ -827,11 +907,19 @@ fn handleWaitingForMotion(builder_data: *CommandBuilderData, state: *State, key:
         .ScrollBottom,
         .BeginMacro,
         .EndMacro,
-        => std.debug.panic(
-            "invalid command for `WaitingForMotion`: {}\n",
-            builder_data.command,
-        ),
-        .Unset => std.debug.panic("no command when waiting for motion"),
+        => {
+            debugPanic(
+                "invalid command for `WaitingForMotion`: {}\n",
+                builder_data.command,
+            );
+
+            return error.InvalidWaitingForMotionCommand;
+        },
+        .Unset => {
+            debugPanic("no command when waiting for motion");
+
+            return error.NoCommandWhenWaitingForMotion;
+        },
     }
 }
 
@@ -857,8 +945,16 @@ fn handleWaitingForSlot(
 
             return command;
         },
-        else => std.debug.panic("unknown macro slot: {}\n", key.key_code),
+        else => {
+            debugPanic("unknown macro slot: {}\n", key.key_code);
+
+            return error.UnknownMacroSlot;
+        },
     }
 }
 
 pub const ESCAPE_KEY = Key{ .key_code = '\x1b' };
+
+fn debugPanic(comptime format: []const u8, args: ...) void {
+    std.debug.panic(format, args);
+}
