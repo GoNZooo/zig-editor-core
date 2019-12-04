@@ -131,8 +131,8 @@ const HandleKeyError = error{OutOfMemory};
 
 /// Handles a key for a given input state.
 /// Because a list of commands can be accumulated across several calls of this an allocator is
-/// needed for the commands that are being recorded. If a `EndMacro` command is returned the caller
-/// is responsible for freeing the associated command list when they no longer care about it.
+/// needed for the macro data that is being recorded. If a `EndMacro` command is returned the
+/// caller is responsible for freeing the associated command list when they no longer care about it.
 pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyError!?Command {
     return switch (state.*) {
         State.Start => |*builder_data| handleStart(builder_data, state, key),
