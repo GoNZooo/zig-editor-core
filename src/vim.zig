@@ -52,6 +52,7 @@ pub const Motion = union(enum) {
     Unset,
     UntilEndOfWord: u32,
     UntilNextWord: u32,
+    UntilPreviousWord: u32,
     UntilEndOfLine: u32,
     UntilBeginningOfLine: u32,
     UntilColumnZero,
@@ -160,7 +161,7 @@ pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyEr
 
                     return null;
                 },
-                'p', 'P', 'j', 'k', '$', '^', '{', '}', 'l', 'h', 'G', 'J', 'u', 'w' => {
+                'p', 'P', 'j', 'k', '$', '^', '{', '}', 'l', 'h', 'G', 'J', 'u', 'w', 'b' => {
                     const command = commandFromKey(
                         key,
                         builder_data.register,
@@ -268,6 +269,7 @@ pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyEr
                         .UntilEndOfLine,
                         .UntilEndOfWord,
                         .UntilNextWord,
+                        .UntilPreviousWord,
                         .UpwardsLines,
                         .DownwardsLines,
                         .BackwardsParagraph,
@@ -363,6 +365,7 @@ pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyEr
                         .Unset,
                         .UntilEndOfWord,
                         .UntilNextWord,
+                        .UntilPreviousWord,
                         .DownwardsLines,
                         .UpwardsLines,
                         .ForwardsParagraph,
@@ -658,6 +661,12 @@ fn commandFromKey(key: Key, register: ?u8, range: ?u32) Command {
         'w' => Command{
             .MotionOnly = CommandData{
                 .motion = Motion{ .UntilNextWord = range orelse 1 },
+                .register = register,
+            },
+        },
+        'b' => Command{
+            .MotionOnly = CommandData{
+                .motion = Motion{ .UntilPreviousWord = range orelse 1 },
                 .register = register,
             },
         },
