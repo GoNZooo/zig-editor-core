@@ -2080,6 +2080,12 @@ test "`qawibC-[q` = 'record macro into 'a'; insert 'b', escape'" {
     switch (sixth_command) {
         .EndMacro => |end_macro_data| {
             testing.expectEqual(end_macro_data.commands.len, 4);
+            testing.expect(std.meta.activeTag(end_macro_data.commands[0]) == Command.MotionOnly);
+            testing.expect(
+                std.meta.activeTag(end_macro_data.commands[1]) == Command.EnterInsertMode,
+            );
+            testing.expect(std.meta.activeTag(end_macro_data.commands[2]) == Command.Insert);
+            testing.expect(std.meta.activeTag(end_macro_data.commands[3]) == Command.ExitInsertMode);
         },
         else => unreachable,
     }
