@@ -1,7 +1,5 @@
 const std = @import("std");
-const testing = std.testing;
 const mem = std.mem;
-const direct_allocator = std.heap.direct_allocator;
 const ArrayList = std.ArrayList;
 
 /// Represents a key press. Unless otherwise specified all modifier keys are assumed to be `false`.
