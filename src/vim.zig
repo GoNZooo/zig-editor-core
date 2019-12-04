@@ -34,8 +34,8 @@ pub const Command = union(enum) {
     ExitInsertMode,
     ReplaceInsert: ReplaceInsertData,
     // @NOTE: `Insert{Upwards,Downwards} are actually supposed to insert on all lines when using
-    // ranges, but the current insert mode doesn't handle this (2019-12-01). It could be solved via
-    // on the client interpretation side via spawning multiple cursors as a response to the range
+    // ranges, but the current insert mode doesn't handle this (2019-12-01). It could be solved on
+    // the client interpretation side via spawning multiple cursors as a response to the range
     // attribute, but punting it to the client seems awkward. With that said, this is not a use case
     // that I'm going to necessarily miss if it never gets implemented...
     InsertDownwards: u32,
