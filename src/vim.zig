@@ -152,26 +152,12 @@ pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyEr
 
         .WaitingForMark => |*builder_data| handleWaitingForMark(builder_data, state, key),
 
-        .WaitingForSlot => |*builder_data| {
-            switch (key.key_code) {
-                'a'...'z', 'A'...'Z', '0'...'9' => {
-                    const command = Command{ .BeginMacro = key.key_code };
-                    var macro_state = try allocator.create(State);
-                    var commands = ArrayList(Command).init(allocator);
-                    macro_state.* = State{ .Start = CommandBuilderData{} };
-                    state.* = State{
-                        .RecordingMacro = RecordingMacroData{
-                            .slot = key.key_code,
-                            .state = macro_state,
-                            .commands = commands,
-                        },
-                    };
-
-                    return command;
-                },
-                else => std.debug.panic("unknown macro slot: {}\n", key.key_code),
-            }
-        },
+        .WaitingForSlot => |*builder_data| try handleWaitingForSlot(
+            allocator,
+            builder_data,
+            state,
+            key,
+        ),
 
         .RecordingMacro => |*in_macro_data| {
             switch (key.key_code) {
@@ -848,6 +834,32 @@ fn handleWaitingForMotion(builder_data: *CommandBuilderData, state: *State, key:
             builder_data.command,
         ),
         .Unset => std.debug.panic("no command when waiting for motion"),
+    }
+}
+
+fn handleWaitingForSlot(
+    allocator: *mem.Allocator,
+    builder_data: *CommandBuilderData,
+    state: *State,
+    key: Key,
+) !?Command {
+    switch (key.key_code) {
+        'a'...'z', 'A'...'Z', '0'...'9' => {
+            const command = Command{ .BeginMacro = key.key_code };
+            var macro_state = try allocator.create(State);
+            var commands = ArrayList(Command).init(allocator);
+            macro_state.* = State{ .Start = CommandBuilderData{} };
+            state.* = State{
+                .RecordingMacro = RecordingMacroData{
+                    .slot = key.key_code,
+                    .state = macro_state,
+                    .commands = commands,
+                },
+            };
+
+            return command;
+        },
+        else => std.debug.panic("unknown macro slot: {}\n", key.key_code),
     }
 }
 
