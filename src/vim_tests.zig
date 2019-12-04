@@ -131,6 +131,29 @@ test "`dw` = 'delete until next word'" {
     }
 }
 
+test "`w` = 'move forward one word'" {
+    const input = "w";
+    const keys = stringToKeys(input.len, input);
+    var state = State{ .Start = CommandBuilderData{} };
+    const commands = try vim.handleKeys(direct_allocator, keys, &state);
+    testing.expectEqual(commands.count(), 1);
+    const command_slice = commands.toSliceConst();
+    const first_command = command_slice[0];
+    testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
+    switch (first_command) {
+        .MotionOnly => |command_data| {
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.UntilNextWord);
+            switch (command_data.motion) {
+                .UntilNextWord => |words| {
+                    testing.expectEqual(words, 1);
+                },
+                else => unreachable,
+            }
+        },
+        else => unreachable,
+    }
+}
+
 test "`dj` = 'delete one line downwards'" {
     const input = "dj";
     const keys = stringToKeys(input.len, input);

@@ -156,7 +156,7 @@ pub fn handleKey(key: Key, state: *State) ?Command {
 
                     return null;
                 },
-                'p', 'P', 'j', 'k', '$', '^', '{', '}', 'l', 'h', 'G', 'J', 'u' => {
+                'p', 'P', 'j', 'k', '$', '^', '{', '}', 'l', 'h', 'G', 'J', 'u', 'w' => {
                     const command = commandFromKey(
                         key,
                         builder_data.register,
@@ -611,6 +611,12 @@ fn commandFromKey(key: Key, register: ?u8, range: ?u32) Command {
         'h' => Command{
             .MotionOnly = CommandData{
                 .motion = Motion{ .BackwardsCharacter = range orelse 1 },
+                .register = register,
+            },
+        },
+        'w' => Command{
+            .MotionOnly = CommandData{
+                .motion = Motion{ .UntilNextWord = range orelse 1 },
                 .register = register,
             },
         },
