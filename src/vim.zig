@@ -42,11 +42,9 @@ pub const Command = union(enum) {
     ScrollTop,
     ScrollCenter,
     ScrollBottom,
+    // @TODO: possibly make a command type that signals that something was part of a recorded macro
     BeginMacro: u8,
     EndMacro,
-    // @TODO: add `StoreMacro` command that will mark a command sequence as being stored in a macro
-    // slot/register.
-    // @TODO: add `PlayMacro` command that will take a macro slot/register to play.
 };
 
 /// Represents a motion that is usually attached to a `Command` (unless the command is `MotionOnly`).
@@ -102,9 +100,9 @@ pub const State = union(enum) {
     WaitingForMark: CommandBuilderData,
     WaitingForGCommand: CommandBuilderData,
     WaitingForZCommand: CommandBuilderData,
+    // @TODO: come up with a better system for recording macros, not requiring nested states.
     WaitingForMacroSlot: CommandBuilderData,
     InMacro: *State,
-    // @TODO: `RecordingMacro` state that will have to contain a list of recorded commands
 };
 
 pub const CommandBuilderData = struct {
