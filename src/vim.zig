@@ -102,7 +102,7 @@ pub const State = union(enum) {
     InInsertMode: InsertModeData,
     WaitingForMotion: CommandBuilderData,
     WaitingForTarget: CommandBuilderData,
-    WaitingForRegisterCharacter: CommandBuilderData,
+    WaitingForRegister: CommandBuilderData,
     WaitingForMark: CommandBuilderData,
     WaitingForGCommand: CommandBuilderData,
     WaitingForZCommand: CommandBuilderData,
@@ -138,7 +138,7 @@ pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyEr
     return switch (state.*) {
         State.Start => |*builder_data| handleStart(builder_data, state, key),
 
-        State.WaitingForRegisterCharacter => |*builder_data| {
+        State.WaitingForRegister => |*builder_data| {
             switch (key.key_code) {
                 'a'...'z', 'A'...'Z', '+', '*' => {
                     builder_data.register = key.key_code;
@@ -153,19 +153,24 @@ pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyEr
         .WaitingForMark => |*builder_data| handleWaitingForMark(builder_data, state, key),
 
         .WaitingForMacroSlot => |*builder_data| {
-            const command = Command{ .BeginMacro = key.key_code };
-            var macro_state = try allocator.create(State);
-            var commands = ArrayList(Command).init(allocator);
-            macro_state.* = State{ .Start = CommandBuilderData{} };
-            state.* = State{
-                .RecordingMacro = RecordingMacroData{
-                    .slot = key.key_code,
-                    .state = macro_state,
-                    .commands = commands,
-                },
-            };
+            switch (key.key_code) {
+                'a'...'z', 'A'...'Z', '0'...'9' => {
+                    const command = Command{ .BeginMacro = key.key_code };
+                    var macro_state = try allocator.create(State);
+                    var commands = ArrayList(Command).init(allocator);
+                    macro_state.* = State{ .Start = CommandBuilderData{} };
+                    state.* = State{
+                        .RecordingMacro = RecordingMacroData{
+                            .slot = key.key_code,
+                            .state = macro_state,
+                            .commands = commands,
+                        },
+                    };
 
-            return command;
+                    return command;
+                },
+                else => std.debug.panic("unknown macro slot: {}\n", key.key_code),
+            }
         },
 
         .RecordingMacro => |*in_macro_data| {
@@ -503,7 +508,7 @@ fn zCommandFromKey(key: Key, state: *State) ?Command {
 fn handleStart(builder_data: *CommandBuilderData, state: *State, key: Key) ?Command {
     switch (key.key_code) {
         '"' => {
-            state.* = State{ .WaitingForRegisterCharacter = builder_data.* };
+            state.* = State{ .WaitingForRegister = builder_data.* };
 
             return null;
         },
