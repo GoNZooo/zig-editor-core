@@ -430,7 +430,7 @@ pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyEr
 
                                 return null;
                             } else {
-                                command_data.motion = motionFromKey(key.key_code, builder_data.*);
+                                command_data.motion = motionFromKey(key, builder_data.*);
                                 const command = builder_data.command;
                                 state.* = State{ .Start = CommandBuilderData{} };
 
@@ -453,20 +453,20 @@ pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyEr
                         'G',
                         '%',
                         => {
-                            command_data.motion = motionFromKey(key.key_code, builder_data.*);
+                            command_data.motion = motionFromKey(key, builder_data.*);
                             const command = builder_data.command;
                             state.* = State{ .Start = CommandBuilderData{} };
 
                             return command;
                         },
                         'f', 'F', 't', 'T', 'i', 's' => {
-                            command_data.motion = motionFromKey(key.key_code, builder_data.*);
+                            command_data.motion = motionFromKey(key, builder_data.*);
                             state.* = State{ .WaitingForTarget = builder_data.* };
 
                             return null;
                         },
                         '`', '\'' => {
-                            command_data.motion = motionFromKey(key.key_code, builder_data.*);
+                            command_data.motion = motionFromKey(key, builder_data.*);
                             state.* = State{ .WaitingForMark = builder_data.* };
 
                             return null;
@@ -506,11 +506,11 @@ pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyEr
         },
 
         State.WaitingForGCommand => |*builder_data| {
-            return gCommandFromKey(key.key_code, state);
+            return gCommandFromKey(key, state);
         },
 
         State.WaitingForZCommand => |*builder_data| {
-            return zCommandFromKey(key.key_code, state);
+            return zCommandFromKey(key, state);
         },
 
         State.InInsertMode => |*insert_mode_data| {
@@ -682,9 +682,8 @@ fn commandFromKey(key: Key, register: ?u8, range: ?u32) Command {
     };
 }
 
-// @TODO: make `motionFromKey` take `Key` instead of `u8`
-fn motionFromKey(character: u8, builder_data: CommandBuilderData) Motion {
-    return switch (character) {
+fn motionFromKey(key: Key, builder_data: CommandBuilderData) Motion {
+    return switch (key.key_code) {
         'd', 'y', 'c' => Motion{ .DownwardsLines = if (builder_data.range) |r| (r - 1) else 0 },
         'e' => Motion{ .UntilEndOfWord = builder_data.range orelse 1 },
         'w' => Motion{ .UntilNextWord = builder_data.range orelse 1 },
@@ -707,15 +706,14 @@ fn motionFromKey(character: u8, builder_data: CommandBuilderData) Motion {
         's' => Motion{ .Surrounding = null },
         'G' => Motion{ .UntilEndOfFile = builder_data.range orelse 0 },
         '%' => Motion.ToMatching,
-        else => std.debug.panic("unsupported motion: {c}\n", character),
+        else => std.debug.panic("unsupported motion: {c}\n", key.key_code),
     };
 }
 
-// @TODO: make `gCommandFromKey` take `Key` instead of `u8`
-fn gCommandFromKey(character: u8, state: *State) ?Command {
+fn gCommandFromKey(key: Key, state: *State) ?Command {
     return switch (state.*) {
         .WaitingForGCommand => |*builder_data| outer: {
-            switch (character) {
+            switch (key.key_code) {
                 'g' => {
                     switch (builder_data.command) {
                         .Delete, .Yank, .Change, .Comment => |*command_data| {
@@ -769,18 +767,17 @@ fn gCommandFromKey(character: u8, state: *State) ?Command {
 
                     break :outer null;
                 },
-                else => std.debug.panic("unsupported G command: {c}\n", character),
+                else => std.debug.panic("unsupported G command: {c}\n", key.key_code),
             }
         },
         else => unreachable,
     };
 }
 
-// @TODO: make `zCommandFromKey` take `Key` instead of `u8`
-fn zCommandFromKey(character: u8, state: *State) ?Command {
+fn zCommandFromKey(key: Key, state: *State) ?Command {
     return switch (state.*) {
         .WaitingForZCommand => |*builder_data| outer: {
-            switch (character) {
+            switch (key.key_code) {
                 't' => {
                     state.* = State{ .Start = CommandBuilderData{} };
 
@@ -796,7 +793,7 @@ fn zCommandFromKey(character: u8, state: *State) ?Command {
 
                     break :outer Command{ .ScrollBottom = undefined };
                 },
-                else => std.debug.panic("unsupported Z command: {c}\n", character),
+                else => std.debug.panic("unsupported Z command: {c}\n", key.key_code),
             }
         },
         else => unreachable,
