@@ -2080,11 +2080,33 @@ test "`qawibC-[q` = 'record macro into 'a'; insert 'b', escape'" {
     switch (sixth_command) {
         .EndMacro => |end_macro_data| {
             testing.expectEqual(end_macro_data.commands.len, 4);
+
             testing.expect(std.meta.activeTag(end_macro_data.commands[0]) == Command.MotionOnly);
+            switch (end_macro_data.commands[0]) {
+                .MotionOnly => |command_data| {
+                    testing.expect(std.meta.activeTag(command_data.motion) == Motion.UntilNextWord);
+                    switch (command_data.motion) {
+                        .UntilNextWord => |words| {
+                            testing.expectEqual(words, 1);
+                        },
+                        else => unreachable,
+                    }
+                },
+                else => unreachable,
+            }
+
             testing.expect(
                 std.meta.activeTag(end_macro_data.commands[1]) == Command.EnterInsertMode,
             );
+
             testing.expect(std.meta.activeTag(end_macro_data.commands[2]) == Command.Insert);
+            switch (end_macro_data.commands[2]) {
+                .Insert => |character| {
+                    testing.expectEqual(character, 'b');
+                },
+                else => unreachable,
+            }
+
             testing.expect(std.meta.activeTag(end_macro_data.commands[3]) == Command.ExitInsertMode);
         },
         else => unreachable,
