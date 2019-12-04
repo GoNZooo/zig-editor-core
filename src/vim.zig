@@ -14,7 +14,8 @@ pub const Key = struct {
 };
 
 /// Represents a vim command. These are to be interpreted as needed by whichever runtime is
-/// interested.
+/// interested. For naked motion commands (possibly with associated range data), there is a
+/// `MotionOnly` command.
 pub const Command = union(enum) {
     Unset,
     MotionOnly: CommandData,
