@@ -58,7 +58,7 @@ pub fn String(comptime T: type) type {
             // @TODO: Determine whether or not it's better to have invalid memory here so that it
             // can be caught, instead of producing a valid empty slice.
             self.allocator.free(self.__chars);
-            self.__chars = [_]T{};
+            self.__chars = &[_]T{};
             self.capacity = 0;
             self.count = 0;
         }
@@ -100,7 +100,7 @@ pub fn String(comptime T: type) type {
             var chars = try mem.concat(
                 allocator,
                 T,
-                [_][]const T{ self.__chars[0..self.count], slice },
+                &[_][]const T{ self.__chars[0..self.count], slice },
             );
 
             return Self{

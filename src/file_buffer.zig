@@ -56,7 +56,7 @@ pub fn FileBuffer(comptime T: type) type {
             self.allocator.free(self.__lines);
             self.count = 0;
             self.capacity = 0;
-            self.__lines = [_]T{};
+            self.__lines = &[_]T{};
         }
 
         // Returns a const slice of the lines in the `FileBuffer`
