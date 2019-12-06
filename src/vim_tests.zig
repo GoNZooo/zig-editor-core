@@ -19,7 +19,7 @@ fn stringToKeys(comptime size: usize, string: *const [size:0]u8) [size]Key {
 }
 
 fn characterToKey(character: u8) Key {
-    return .{ .key_code = character };
+    return Key{ .key_code = character };
 }
 
 test "`dd` creates a delete command" {
