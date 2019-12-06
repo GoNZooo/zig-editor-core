@@ -2,8 +2,6 @@ const std = @import("std");
 const mem = std.mem;
 const ArrayList = std.ArrayList;
 
-// @TODO: Update to use anonymous structs when return value is known
-
 /// Represents a key press. Unless otherwise specified all modifier keys are assumed to be `false`.
 pub const Key = struct {
     key_code: u8,
