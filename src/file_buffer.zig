@@ -23,7 +23,7 @@ pub const InsertCopyOptions = struct {
 };
 
 pub const FromFileOptions = struct {
-    newline_delimiter: []const u8,
+    newline_delimiter: ?[]const u8 = null,
     max_size: usize,
 };
 
@@ -64,19 +64,24 @@ pub fn FileBuffer(comptime T: type) type {
             self.__lines = &[_]T{};
         }
 
-        /// Creates a `FileBuffer` from a file. A newline delimiter slice and a maximum size for the
-        /// read file has to be given via a `FromFileOptions` struct. The created `FileBuffer` will
-        /// be created with a `FileBufferOptions` passed as well, allowing for the usual
-        /// initialization to be done.
+        /// Creates a `FileBuffer` from a file. The created `FileBuffer` will be created with the
+        /// `FileBufferOptions` passed, allowing for the usual initialization to be done.
+        /// A maximum size for the file has to be given via the `FromFileOptions` struct and a
+        /// `.newline_delimiter` can be specified. If not specified, will default to the targeted
+        /// platform.
         pub fn fromRelativeFile(
             allocator: *mem.Allocator,
             filename: []const u8,
             from_file_options: FromFileOptions,
             file_buffer_options: FileBufferOptions,
         ) !Self {
+            const newline_delimiter = if (from_file_options.newline_delimiter) |d| d else default: {
+                break :default getPlatformNewlineDelimiter();
+            };
+
             var cwd = std.fs.cwd();
             var file_bytes = try cwd.readFileAlloc(allocator, filename, from_file_options.max_size);
-            var newline_iterator = mem.separate(file_bytes, from_file_options.newline_delimiter);
+            var newline_iterator = mem.separate(file_bytes, newline_delimiter);
             var buffer = try Self.init(allocator, file_buffer_options);
             while (newline_iterator.next()) |l| {
                 try buffer.addLine(allocator, try String(u8).copyConst(allocator, l));
@@ -240,5 +245,12 @@ pub fn FileBuffer(comptime T: type) type {
         fn getRequiredCapacity(self: Self, lines_to_add: ConstLines) usize {
             return utilities.max(usize, self.capacity, self.count + lines_to_add.len);
         }
+    };
+}
+fn getPlatformNewlineDelimiter() []const u8 {
+    return switch (std.builtin.os) {
+        .windows => "\r\n",
+        // @TODO: establish if `else` here is actually representative of reality.
+        else => "\n",
     };
 }
