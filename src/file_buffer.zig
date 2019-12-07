@@ -22,6 +22,11 @@ pub const InsertCopyOptions = struct {
     shrink: bool = false,
 };
 
+pub const FromFileOptions = struct {
+    newline_delimiter: []const u8,
+    max_size: usize,
+};
+
 pub fn FileBuffer(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -59,16 +64,20 @@ pub fn FileBuffer(comptime T: type) type {
             self.__lines = &[_]T{};
         }
 
+        /// Creates a `FileBuffer` from a file. A newline delimiter slice and a maximum size for the
+        /// read file has to be given via a `FromFileOptions` struct. The created `FileBuffer` will
+        /// be created with a `FileBufferOptions` passed as well, allowing for the usual
+        /// initialization to be done.
         pub fn fromRelativeFile(
             allocator: *mem.Allocator,
             filename: []const u8,
-            newline: []const u8,
-            options: FileBufferOptions,
+            from_file_options: FromFileOptions,
+            file_buffer_options: FileBufferOptions,
         ) !Self {
             var cwd = std.fs.cwd();
-            var file_bytes = try cwd.readFileAlloc(allocator, filename, 512);
-            var newline_iterator = mem.separate(file_bytes, newline);
-            var buffer = try Self.init(allocator, options);
+            var file_bytes = try cwd.readFileAlloc(allocator, filename, from_file_options.max_size);
+            var newline_iterator = mem.separate(file_bytes, from_file_options.newline_delimiter);
+            var buffer = try Self.init(allocator, file_buffer_options);
             while (newline_iterator.next()) |l| {
                 try buffer.addLine(allocator, try String(u8).copyConst(allocator, l));
             }

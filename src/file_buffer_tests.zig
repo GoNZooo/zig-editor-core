@@ -4,6 +4,7 @@ const FileBufferOptions = file_buffer.FileBufferOptions;
 const AppendCopyOptions = file_buffer.AppendCopyOptions;
 const RemoveOptions = file_buffer.RemoveOptions;
 const InsertCopyOptions = file_buffer.InsertCopyOptions;
+const FromFileOptions = file_buffer.FromFileOptions;
 const String = @import("./string.zig").String;
 
 const std = @import("std");
@@ -331,7 +332,7 @@ test "`fromRelativeFile` reads a file properly into the buffer" {
     var buffer = try FileBuffer(String(u8)).fromRelativeFile(
         direct_allocator,
         test1_path,
-        test1_newline_delimiter,
+        FromFileOptions{ .newline_delimiter = test1_newline_delimiter, .max_size = 512 },
         FileBufferOptions{},
     );
 
