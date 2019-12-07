@@ -322,17 +322,11 @@ const test1_path = switch (std.builtin.os) {
     else => "data/file_buffer_tests/test1.txt",
 };
 
-const test1_newline_delimiter = switch (std.builtin.os) {
-    .windows => "\r\n",
-    // @TODO: establish if `else` here is actually representative of reality.
-    else => "\n",
-};
-
 test "`fromRelativeFile` reads a file properly into the buffer" {
     var buffer = try FileBuffer(String(u8)).fromRelativeFile(
         direct_allocator,
         test1_path,
-        FromFileOptions{ .newline_delimiter = test1_newline_delimiter, .max_size = 512 },
+        FromFileOptions{ .max_size = 512 },
         FileBufferOptions{},
     );
 
