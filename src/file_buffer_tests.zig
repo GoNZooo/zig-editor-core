@@ -323,6 +323,7 @@ const test1_path = switch (std.builtin.os) {
 
 const test1_newline_delimiter = switch (std.builtin.os) {
     .windows => "\r\n",
+    // @TODO: establish if `else` here is actually representative of reality.
     else => "\n",
 };
 
