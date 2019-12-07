@@ -321,7 +321,7 @@ const test1_path = switch (std.builtin.os) {
     else => "data/file_buffer_tests/test1.txt",
 };
 
-test "`fromFilename` reads a file properly into the buffer" {
+test "`fromRelativeFile` reads a file properly into the buffer" {
     var buffer = try FileBuffer(String(u8)).fromRelativeFile(
         direct_allocator,
         test1_path,
