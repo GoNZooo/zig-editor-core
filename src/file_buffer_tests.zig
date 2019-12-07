@@ -316,6 +316,31 @@ test "`removeCopy` removes and gives a new `FileBuffer` and can shrink" {
     testing.expectEqualSlices(u8, buffer2.lines()[1].sliceConst(), string3.sliceConst());
 }
 
-// test "`fromFilename` reads a file properly into the "
+const test1_path = switch (std.builtin.os) {
+    .windows => "data\\file_buffer_tests\\test1.txt",
+    else => "data/file_buffer_tests/test1.txt",
+};
+
+test "`fromFilename` reads a file properly into the buffer" {
+    var buffer = try FileBuffer(String(u8)).fromRelativeFile(
+        direct_allocator,
+        test1_path,
+        "\r\n",
+        FileBufferOptions{},
+    );
+
+    const lines = buffer.lines();
+    const line1 = lines[0].sliceConst();
+    const line2 = lines[1].sliceConst();
+    const line3 = lines[2].sliceConst();
+    const line4 = lines[3].sliceConst();
+    const line5 = lines[4].sliceConst();
+
+    testing.expectEqualSlices(u8, line1, "hello");
+    testing.expectEqualSlices(u8, line2, "");
+    testing.expectEqualSlices(u8, line3, "there");
+    testing.expectEqualSlices(u8, line4, "you handsome");
+    testing.expectEqualSlices(u8, line5, "devil, you");
+}
 
 pub fn runTests() void {}
