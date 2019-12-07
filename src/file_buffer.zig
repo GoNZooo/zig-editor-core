@@ -6,19 +6,19 @@ const utilities = @import("./utilities.zig");
 const String = @import("./string.zig").String;
 const assert = std.debug.assert;
 
-const FileBufferOptions = struct {
+pub const FileBufferOptions = struct {
     initial_capacity: ?usize = null,
 };
 
-const RemoveOptions = struct {
+pub const RemoveOptions = struct {
     shrink: bool = false,
 };
 
-const AppendCopyOptions = struct {
+pub const AppendCopyOptions = struct {
     shrink: bool = false,
 };
 
-const InsertCopyOptions = struct {
+pub const InsertCopyOptions = struct {
     shrink: bool = false,
 };
 
