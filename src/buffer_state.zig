@@ -12,6 +12,7 @@ pub fn BufferState(comptime T: type) type {
 
         buffer: FileBuffer(T),
         vim_state: vim.State,
+        allocator: *mem.Allocator,
 
         pub fn init(allocator: *mem.Allocator) !Self {
             var buffer = try FileBuffer(T).init(allocator, FileBufferOptions{});
@@ -19,7 +20,12 @@ pub fn BufferState(comptime T: type) type {
             return Self{
                 .buffer = buffer,
                 .vim_state = vim.State.start(),
+                .allocator = allocator,
             };
+        }
+
+        pub fn deinit(self: *Self) void {
+            self.buffer.deinit();
         }
     };
 }
