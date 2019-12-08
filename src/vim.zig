@@ -106,6 +106,10 @@ pub const State = union(enum) {
     WaitingForZCommand: CommandBuilderData,
     WaitingForSlot: CommandBuilderData,
     RecordingMacro: RecordingMacroData,
+
+    pub fn initial_state() State {
+        return State{ .Start = CommandBuilderData{} };
+    }
 };
 
 const RecordingMacroData = struct {
