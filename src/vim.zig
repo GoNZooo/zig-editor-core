@@ -196,7 +196,7 @@ pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyEr
                     // We destroy only the intermediate macro data state because it's internal.
                     // The command list that has been recorded will have to be freed by the user.
                     allocator.destroy(in_macro_data.state);
-                    state.* = State{ .Start = CommandBuilderData{} };
+                    state.* = State.start();
 
                     return command;
                 },
@@ -235,7 +235,7 @@ pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyEr
             return switch (key.key_code) {
                 ESCAPE_KEY.key_code => i: {
                     const command = Command{ .ExitInsertMode = undefined };
-                    state.* = State{ .Start = CommandBuilderData{} };
+                    state.* = State.start();
 
                     break :i command;
                 },
@@ -521,17 +521,17 @@ fn zCommandFromKey(key: Key, state: *State) !?Command {
         .WaitingForZCommand => |*builder_data| outer: {
             switch (key.key_code) {
                 't' => {
-                    state.* = State{ .Start = CommandBuilderData{} };
+                    state.* = State.start();
 
                     break :outer Command{ .ScrollTop = undefined };
                 },
                 'z' => {
-                    state.* = State{ .Start = CommandBuilderData{} };
+                    state.* = State.start();
 
                     break :outer Command{ .ScrollCenter = undefined };
                 },
                 'b' => {
-                    state.* = State{ .Start = CommandBuilderData{} };
+                    state.* = State.start();
 
                     break :outer Command{ .ScrollBottom = undefined };
                 },
@@ -590,7 +590,7 @@ fn handleStart(builder_data: *CommandBuilderData, state: *State, key: Key) !?Com
                 builder_data.register,
                 builder_data.range,
             );
-            state.* = State{ .Start = CommandBuilderData{} };
+            state.* = State.start();
 
             return command;
         },
@@ -624,7 +624,7 @@ fn handleStart(builder_data: *CommandBuilderData, state: *State, key: Key) !?Com
             const command = try commandFromKey(key, builder_data.register, builder_data.range);
             switch (command) {
                 Command.Redo => {
-                    state.* = State{ .Start = CommandBuilderData{} };
+                    state.* = State.start();
 
                     return command;
                 },
@@ -662,7 +662,7 @@ fn handleWaitingForMark(builder_data: *CommandBuilderData, state: *State, key: K
         .SetMark => |*mark| {
             mark.* = key.key_code;
             const command = builder_data.command;
-            state.* = State{ .Start = CommandBuilderData{} };
+            state.* = State.start();
 
             return command;
         },
@@ -671,7 +671,7 @@ fn handleWaitingForMark(builder_data: *CommandBuilderData, state: *State, key: K
                 .ToMarkLine, .ToMarkPosition => |*mark| {
                     mark.* = key.key_code;
                     const command = builder_data.command;
-                    state.* = State{ .Start = CommandBuilderData{} };
+                    state.* = State.start();
 
                     return command;
                 },
@@ -753,7 +753,7 @@ fn handleWaitingForTarget(builder_data: *CommandBuilderData, state: *State, key:
                 => |*target| {
                     target.* = key.key_code;
                     const command = builder_data.command;
-                    state.* = State{ .Start = CommandBuilderData{} };
+                    state.* = State.start();
 
                     return command;
                 },
@@ -842,7 +842,7 @@ fn handleWaitingForMotion(builder_data: *CommandBuilderData, state: *State, key:
                     } else {
                         command_data.motion = try motionFromKey(key, builder_data.*);
                         const command = builder_data.command;
-                        state.* = State{ .Start = CommandBuilderData{} };
+                        state.* = State.start();
 
                         return command;
                     }
@@ -865,7 +865,7 @@ fn handleWaitingForMotion(builder_data: *CommandBuilderData, state: *State, key:
                 => {
                     command_data.motion = try motionFromKey(key, builder_data.*);
                     const command = builder_data.command;
-                    state.* = State{ .Start = CommandBuilderData{} };
+                    state.* = State.start();
 
                     return command;
                 },
@@ -938,7 +938,7 @@ fn handleWaitingForSlot(
             const command = Command{ .BeginMacro = key.key_code };
             var macro_state = try allocator.create(State);
             var commands = ArrayList(Command).init(allocator);
-            macro_state.* = State{ .Start = CommandBuilderData{} };
+            macro_state.* = State.start();
             state.* = State{
                 .RecordingMacro = RecordingMacroData{
                     .slot = key.key_code,
