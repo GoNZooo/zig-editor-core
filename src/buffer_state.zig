@@ -10,22 +10,18 @@ pub fn BufferState(comptime T: type) type {
     return struct {
         const Self = @This();
 
-        buffer: FileBuffer(T),
+        buffer: ?FileBuffer(T),
         vim_state: vim.State,
-        allocator: *mem.Allocator,
 
-        pub fn init(allocator: *mem.Allocator) !Self {
-            var buffer = try FileBuffer(T).init(allocator, FileBufferOptions{});
-
+        pub fn init() Self {
             return Self{
-                .buffer = buffer,
+                .buffer = null,
                 .vim_state = vim.State.start(),
-                .allocator = allocator,
             };
         }
 
         pub fn deinit(self: *Self) void {
-            self.buffer.deinit();
+            if (self.buffer) |*fb| fb.deinit();
         }
     };
 }

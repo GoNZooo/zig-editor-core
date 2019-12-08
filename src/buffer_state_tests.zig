@@ -6,11 +6,11 @@ const testing = std.testing;
 const meta = std.meta;
 
 test "`init` works" {
-    var buffer_state = try BufferState(u8).init(direct_allocator);
+    var buffer_state = BufferState(u8).init();
     testing.expect(meta.activeTag(buffer_state.vim_state) == .Start);
 }
 
 test "`deinit` works" {
-    var buffer_state = try BufferState(u8).init(direct_allocator);
+    var buffer_state = BufferState(u8).init();
     buffer_state.deinit();
 }
