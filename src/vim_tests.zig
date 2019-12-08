@@ -2110,5 +2110,3 @@ test "`qawibC-[q` = 'record macro into 'a'; insert 'b', escape'" {
         else => unreachable,
     }
 }
-
-pub fn runTests() void {}

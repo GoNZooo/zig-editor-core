@@ -343,5 +343,3 @@ test "`fromRelativeFile` reads a file properly into the buffer" {
     testing.expectEqualSlices(u8, line4, "you handsome");
     testing.expectEqualSlices(u8, line5, "devil, you");
 }
-
-pub fn runTests() void {}
