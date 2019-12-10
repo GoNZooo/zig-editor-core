@@ -6,6 +6,8 @@ const vim = @import("./vim.zig");
 const std = @import("std");
 const mem = std.mem;
 
+/// Is meant to represent the state of a buffer, which loosely should mean a given view into a file.
+/// That file does not need to exist on disk, but is rather just a collection of text.
 pub fn BufferState(comptime T: type) type {
     return struct {
         const Self = @This();
