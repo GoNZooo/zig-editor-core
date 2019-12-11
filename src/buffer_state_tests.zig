@@ -13,8 +13,10 @@ const direct_allocator = std.heap.direct_allocator;
 const testing = std.testing;
 const meta = std.meta;
 
+const U8BufferState = BufferState(String(u8), String(u8).copyConst);
+
 test "`init` works" {
-    var buffer_state = try BufferState(String(u8), String(u8).copyConst).init(
+    var buffer_state = try U8BufferState.init(
         direct_allocator,
         FileBufferOptions{},
     );
@@ -22,7 +24,7 @@ test "`init` works" {
 }
 
 test "`deinit` works" {
-    var buffer_state = try BufferState(String(u8), String(u8).copyConst).init(
+    var buffer_state = try U8BufferState.init(
         direct_allocator,
         FileBufferOptions{},
     );
@@ -42,7 +44,7 @@ test "supports `loadRelativeFile`" {
         },
     };
 
-    var buffer_state = try BufferState(String(u8), String(u8).copyConst).init(
+    var buffer_state = try U8BufferState.init(
         direct_allocator,
         FileBufferOptions{},
     );
