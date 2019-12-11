@@ -12,8 +12,10 @@ const mem = std.mem;
 const testing = std.testing;
 const direct_allocator = std.heap.direct_allocator;
 
+const U8FileBuffer = FileBuffer(String(u8), String(u8).copyConst);
+
 test "`deinit` frees the memory in the `FileBuffer`" {
-    var buffer = try FileBuffer(String(u8), String(u8).copyConst).init(
+    var buffer = try U8FileBuffer.init(
         direct_allocator,
         FileBufferOptions{},
     );
@@ -50,7 +52,7 @@ test "`deinit` frees the memory in the `FileBuffer` without `deinit()` present" 
 }
 
 test "`append` appends lines" {
-    var buffer = try FileBuffer(String(u8), String(u8).copyConst).init(
+    var buffer = try U8FileBuffer.init(
         direct_allocator,
         FileBufferOptions{},
     );
@@ -70,7 +72,7 @@ test "`append` appends lines" {
 }
 
 test "`append` appends lines but doesn't increase capacity if already sufficient" {
-    var buffer = try FileBuffer(String(u8), String(u8).copyConst).init(direct_allocator, FileBufferOptions{
+    var buffer = try U8FileBuffer.init(direct_allocator, FileBufferOptions{
         .initial_capacity = 120,
     });
     testing.expectEqual(buffer.count, 0);
@@ -88,7 +90,7 @@ test "`append` appends lines but doesn't increase capacity if already sufficient
 }
 
 test "`appendCopy` appends lines" {
-    var buffer = try FileBuffer(String(u8), String(u8).copyConst).init(direct_allocator, FileBufferOptions{
+    var buffer = try U8FileBuffer.init(direct_allocator, FileBufferOptions{
         .initial_capacity = 120,
     });
     testing.expectEqual(buffer.count, 0);
@@ -112,7 +114,7 @@ test "`appendCopy` appends lines" {
 }
 
 test "`appendCopy` appends lines and shrinks if given the option" {
-    var buffer = try FileBuffer(String(u8), String(u8).copyConst).init(
+    var buffer = try U8FileBuffer.init(
         direct_allocator,
         FileBufferOptions{
             .initial_capacity = 120,
@@ -139,7 +141,7 @@ test "`appendCopy` appends lines and shrinks if given the option" {
 }
 
 test "`insert` inserts lines" {
-    var buffer = try FileBuffer(String(u8), String(u8).copyConst).init(
+    var buffer = try U8FileBuffer.init(
         direct_allocator,
         FileBufferOptions{},
     );
@@ -168,7 +170,7 @@ test "`insert` inserts lines" {
 }
 
 test "`insertCopy` inserts lines" {
-    var buffer = try FileBuffer(String(u8), String(u8).copyConst).init(direct_allocator, FileBufferOptions{});
+    var buffer = try U8FileBuffer.init(direct_allocator, FileBufferOptions{});
     testing.expectEqual(buffer.count, 0);
 
     const string1 = try String(u8).copyConst(direct_allocator, "hello");
@@ -199,7 +201,7 @@ test "`insertCopy` inserts lines" {
 }
 
 test "`insertCopy` inserts lines and doesn't shrink unless told otherwise" {
-    var buffer = try FileBuffer(String(u8), String(u8).copyConst).init(direct_allocator, FileBufferOptions{
+    var buffer = try U8FileBuffer.init(direct_allocator, FileBufferOptions{
         .initial_capacity = 80,
     });
     testing.expectEqual(buffer.count, 0);
@@ -233,7 +235,7 @@ test "`insertCopy` inserts lines and doesn't shrink unless told otherwise" {
 }
 
 test "`insertCopy` inserts lines and shrinks if told to do so" {
-    var buffer = try FileBuffer(String(u8), String(u8).copyConst).init(direct_allocator, FileBufferOptions{
+    var buffer = try U8FileBuffer.init(direct_allocator, FileBufferOptions{
         .initial_capacity = 80,
     });
     testing.expectEqual(buffer.count, 0);
@@ -264,7 +266,7 @@ test "`insertCopy` inserts lines and shrinks if told to do so" {
 }
 
 test "`remove` removes" {
-    var buffer = try FileBuffer(String(u8), String(u8).copyConst).init(direct_allocator, FileBufferOptions{});
+    var buffer = try U8FileBuffer.init(direct_allocator, FileBufferOptions{});
     const string1 = try String(u8).copyConst(direct_allocator, "hello");
     const string2 = try String(u8).copyConst(direct_allocator, "there");
     const string3 = try String(u8).copyConst(direct_allocator, "handsome");
@@ -278,7 +280,7 @@ test "`remove` removes" {
 }
 
 test "`remove` removes and shrinks when `shrink` option is `true`" {
-    var buffer = try FileBuffer(String(u8), String(u8).copyConst).init(direct_allocator, FileBufferOptions{});
+    var buffer = try U8FileBuffer.init(direct_allocator, FileBufferOptions{});
     const string1 = try String(u8).copyConst(direct_allocator, "hello");
     const string2 = try String(u8).copyConst(direct_allocator, "there");
     const string3 = try String(u8).copyConst(direct_allocator, "handsome");
@@ -306,7 +308,7 @@ test "`remove` removes when type does not have `deinit()`" {
 }
 
 test "`removeCopy` removes and gives a new `FileBuffer`" {
-    var buffer = try FileBuffer(String(u8), String(u8).copyConst).init(direct_allocator, FileBufferOptions{});
+    var buffer = try U8FileBuffer.init(direct_allocator, FileBufferOptions{});
     const string1 = try String(u8).copyConst(direct_allocator, "hello");
     const string2 = try String(u8).copyConst(direct_allocator, "there");
     const string3 = try String(u8).copyConst(direct_allocator, "handsome");
@@ -320,7 +322,7 @@ test "`removeCopy` removes and gives a new `FileBuffer`" {
 }
 
 test "`removeCopy` removes and gives a new `FileBuffer` and can shrink" {
-    var buffer = try FileBuffer(String(u8), String(u8).copyConst).init(direct_allocator, FileBufferOptions{});
+    var buffer = try U8FileBuffer.init(direct_allocator, FileBufferOptions{});
     const string1 = try String(u8).copyConst(direct_allocator, "hello");
     const string2 = try String(u8).copyConst(direct_allocator, "there");
     const string3 = try String(u8).copyConst(direct_allocator, "handsome");
@@ -341,7 +343,7 @@ const test1_path = switch (std.builtin.os) {
 };
 
 test "`fromRelativeFile` reads a file properly into the buffer" {
-    var buffer = try FileBuffer(String(u8), String(u8).copyConst).fromRelativeFile(
+    var buffer = try U8FileBuffer.fromRelativeFile(
         direct_allocator,
         test1_path,
         FromFileOptions{ .max_size = 512 },
