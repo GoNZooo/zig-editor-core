@@ -47,6 +47,9 @@ test "supports `loadRelativeFile`" {
         FileBufferOptions{},
     );
 
+    testing.expectEqual(buffer_state.cursor.column, 0);
+    testing.expectEqual(buffer_state.cursor.line, 0);
+
     try buffer_state.loadRelativeFile(
         direct_allocator,
         test_file_path,
