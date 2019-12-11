@@ -6,10 +6,6 @@ const utilities = @import("./utilities.zig");
 const String = @import("./string.zig").String;
 const assert = std.debug.assert;
 
-pub const FileBufferOptions = struct {
-    initial_capacity: ?usize = null,
-};
-
 pub const RemoveOptions = struct {
     shrink: bool = false,
 };
@@ -27,7 +23,15 @@ pub const FromFileOptions = struct {
     max_size: usize,
 };
 
-pub fn FileBuffer(comptime T: type) type {
+pub const FileBufferOptions = struct {
+    initial_capacity: ?usize = null,
+};
+
+pub fn TFromU8Function(comptime T: type) type {
+    return fn (allocator: *mem.Allocator, string: []const u8) error{OutOfMemory}!T;
+}
+
+pub fn FileBuffer(comptime T: type, comptime tFromU8: TFromU8Function(T)) type {
     return struct {
         const Self = @This();
         const Lines = []T;
@@ -84,7 +88,9 @@ pub fn FileBuffer(comptime T: type) type {
             var newline_iterator = mem.separate(file_bytes, newline_delimiter);
             var buffer = try Self.init(allocator, file_buffer_options);
             while (newline_iterator.next()) |l| {
-                try buffer.addLine(allocator, try String(u8).copyConst(allocator, l));
+                const s = try tFromU8(allocator, l);
+
+                try buffer.addLine(allocator, s);
             }
 
             return buffer;
