@@ -18,7 +18,7 @@ pub const BufferStateOptions = struct {
     from_file_options: ?FromFileOptions = null,
 };
 
-/// Is meant to represent the state of a buffer, which loosely should mean a given view into a file.
+/// Is meant to represent the state of a buffer, which loosely should mean a view into a file.
 /// That file does not need to exist on disk, but is rather just a collection of text.
 pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Function(T)) type {
     return struct {
