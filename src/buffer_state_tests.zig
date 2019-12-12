@@ -37,13 +37,6 @@ const test_file_path = switch (std.builtin.os) {
 };
 
 test "supports `loadRelativeFile`" {
-    const command = Command{
-        .MotionOnly = CommandData{
-            .motion = Motion{ .UntilNextWord = 1 },
-            .register = null,
-        },
-    };
-
     var buffer_state = try U8BufferState.init(
         direct_allocator,
         FileBufferOptions{},
