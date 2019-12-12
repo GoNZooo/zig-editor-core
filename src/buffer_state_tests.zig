@@ -1,4 +1,6 @@
-const BufferState = @import("./buffer_state.zig").BufferState;
+const buffer_state = @import("./buffer_state.zig");
+const BufferState = buffer_state.BufferState;
+const BufferStateOptions = buffer_state.BufferStateOptions;
 const vim = @import("./vim.zig");
 const Command = vim.Command;
 const CommandData = vim.CommandData;
@@ -16,19 +18,21 @@ const meta = std.meta;
 const U8BufferState = BufferState(String(u8), String(u8).copyConst);
 
 test "`init` works" {
-    var buffer_state = try U8BufferState.init(
+    var state = try U8BufferState.init(
         direct_allocator,
+        BufferStateOptions{},
         FileBufferOptions{},
     );
-    testing.expect(meta.activeTag(buffer_state.vim_state) == .Start);
+    testing.expect(meta.activeTag(state.vim_state) == .Start);
 }
 
 test "`deinit` works" {
-    var buffer_state = try U8BufferState.init(
+    var state = try U8BufferState.init(
         direct_allocator,
+        BufferStateOptions{},
         FileBufferOptions{},
     );
-    buffer_state.deinit();
+    state.deinit();
 }
 
 const test_file_path = switch (std.builtin.os) {
@@ -37,21 +41,55 @@ const test_file_path = switch (std.builtin.os) {
 };
 
 test "supports `loadRelativeFile`" {
-    var buffer_state = try U8BufferState.init(
+    var state = try U8BufferState.init(
         direct_allocator,
+        BufferStateOptions{},
         FileBufferOptions{},
     );
 
-    testing.expectEqual(buffer_state.cursor.column, 0);
-    testing.expectEqual(buffer_state.cursor.line, 0);
+    testing.expectEqual(state.cursor.column, 0);
+    testing.expectEqual(state.cursor.line, 0);
 
-    try buffer_state.loadRelativeFile(
+    try state.loadRelativeFile(
         direct_allocator,
         test_file_path,
         FromFileOptions{ .max_size = 128 },
     );
 
-    const lines = buffer_state.buffer.lines();
+    const lines = state.buffer.lines();
+
+    const line1 = lines[0].sliceConst();
+    testing.expectEqualSlices(u8, line1, "hello");
+
+    const line2 = lines[1].sliceConst();
+    testing.expectEqualSlices(u8, line2, "");
+
+    const line3 = lines[2].sliceConst();
+    testing.expectEqualSlices(u8, line3, "there");
+
+    const line4 = lines[3].sliceConst();
+    testing.expectEqualSlices(u8, line4, "you handsome");
+
+    const line5 = lines[4].sliceConst();
+    testing.expectEqualSlices(u8, line5, "devil, you");
+}
+
+test "`init` with `pathToRelativeFile` loads file immediately at creation" {
+    var state = try U8BufferState.init(
+        direct_allocator,
+        BufferStateOptions{
+            .pathToRelativeFile = test_file_path,
+            .from_file_options = FromFileOptions{
+                .max_size = 128,
+            },
+        },
+        FileBufferOptions{},
+    );
+
+    testing.expectEqual(state.cursor.column, 0);
+    testing.expectEqual(state.cursor.line, 0);
+
+    const lines = state.buffer.lines();
 
     const line1 = lines[0].sliceConst();
     testing.expectEqualSlices(u8, line1, "hello");

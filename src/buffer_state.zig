@@ -13,6 +13,11 @@ const CursorPosition = struct {
     line: u32,
 };
 
+pub const BufferStateOptions = struct {
+    pathToRelativeFile: ?[]const u8 = null,
+    from_file_options: ?FromFileOptions = null,
+};
+
 /// Is meant to represent the state of a buffer, which loosely should mean a given view into a file.
 /// That file does not need to exist on disk, but is rather just a collection of text.
 pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Function(T)) type {
@@ -23,8 +28,25 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
         vim_state: vim.State,
         cursor: CursorPosition,
 
-        pub fn init(allocator: *mem.Allocator, file_buffer_options: FileBufferOptions) !Self {
-            var buffer = try FileBuffer(T, tFromU8).init(allocator, file_buffer_options);
+        pub fn init(
+            allocator: *mem.Allocator,
+            options: BufferStateOptions,
+            file_buffer_options: FileBufferOptions,
+        ) !Self {
+            var buffer: FileBuffer(T, tFromU8) = undefined;
+            if (options.pathToRelativeFile) |path| {
+                const ff_options = if (options.from_file_options) |o| o else FromFileOptions{
+                    .max_size = 256,
+                };
+                buffer = try FileBuffer(T, tFromU8).fromRelativeFile(
+                    allocator,
+                    path,
+                    ff_options,
+                    FileBufferOptions{},
+                );
+            } else {
+                buffer = try FileBuffer(T, tFromU8).init(allocator, file_buffer_options);
+            }
 
             return Self{
                 .buffer = buffer,
