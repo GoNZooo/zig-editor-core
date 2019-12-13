@@ -27,6 +27,7 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
         buffer: FileBuffer(T, tFromU8),
         vim_state: vim.State,
         cursor: CursorPosition,
+        allocator: *mem.Allocator,
 
         pub fn init(
             allocator: *mem.Allocator,
@@ -52,6 +53,7 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
                 .buffer = buffer,
                 .vim_state = vim.State.start(),
                 .cursor = CursorPosition{ .column = 0, .line = 0 },
+                .allocator = allocator,
             };
         }
 
