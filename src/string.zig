@@ -22,13 +22,24 @@ pub fn StringIterator(comptime T: type) type {
         __current: ?usize,
         __max_length: usize,
         __data: []T,
+        __starting_position: usize,
 
         pub fn next(self: *Self) ?T {
             self.__current = if (self.__current) |c| c + 1 else 0;
-            // std.debug.warn("self.__data: {}\n", self.__data);
-            // std.debug.warn("self.__max_length: {}\n", self.__max_length);
 
             return if (self.__current.? >= self.__max_length) null else self.__data[self.__current.?];
+        }
+
+        pub fn previous(self: *Self) ?T {
+            if (self.__current) |*current| {
+                if (current.* > 0) current.* -= 1 else return null;
+
+                return self.__data[current.*];
+            } else {
+                self.__current = self.__starting_position;
+
+                return if (self.__current.? >= 0) self.__data[self.__current.?] else null;
+            }
         }
 
         pub fn peek(self: Self) ?T {
@@ -45,6 +56,22 @@ pub fn StringIterator(comptime T: type) type {
             } else {
                 return self.__data[0];
             }
+        }
+
+        pub fn peekPrevious(self: Self) ?T {
+            if (self.__current) |current| {
+                if (current > 0) {
+                    return self.__data[current - 1];
+                } else {
+                    return null;
+                }
+            } else {
+                return self.__data[self.__starting_position];
+            }
+        }
+
+        pub fn column(self: Self) usize {
+            return if (self.__current) |c| c else self.__starting_position;
         }
     };
 }
@@ -254,7 +281,26 @@ pub fn String(comptime T: type) type {
 
         pub fn iteratorConst(self: Self) StringIterator(T) {
             return StringIterator(T){
+                .__starting_position = 0,
                 .__current = null,
+                .__max_length = self.count,
+                .__data = self.__chars,
+            };
+        }
+
+        pub fn iteratorAt(self: Self, column: usize) StringIterator(T) {
+            return StringIterator(T){
+                .__current = null,
+                .__starting_position = column,
+                .__max_length = self.count,
+                .__data = self.__chars,
+            };
+        }
+
+        pub fn iteratorFromEnd(self: Self) StringIterator(T) {
+            return StringIterator(T){
+                .__current = null,
+                .__starting_position = self.count - 1,
                 .__max_length = self.count,
                 .__data = self.__chars,
             };

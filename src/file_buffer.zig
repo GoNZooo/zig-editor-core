@@ -31,6 +31,29 @@ pub fn TFromU8Function(comptime T: type) type {
     return fn (allocator: *mem.Allocator, string: []const u8) error{OutOfMemory}!T;
 }
 
+pub fn LineIterator(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        __current: ?usize,
+        __data: []T,
+        __max_length: usize,
+        __starting_position: usize,
+
+        pub fn previous(self: *Self) ?T {
+            if (self.__current) |*current| {
+                current.* -= 1;
+
+                return if (current.* >= 0) self.__data[current.*] else null;
+            } else {
+                self.__current = self.__starting_position;
+
+                return if (self.__current.? >= 0) self.__data[self.__current.?] else null;
+            }
+        }
+    };
+}
+
 pub fn FileBuffer(comptime T: type, comptime tFromU8: TFromU8Function(T)) type {
     return struct {
         const Self = @This();
@@ -99,6 +122,15 @@ pub fn FileBuffer(comptime T: type, comptime tFromU8: TFromU8Function(T)) type {
         // Returns a const slice of the lines in the `FileBuffer`
         pub fn lines(self: Self) ConstLines {
             return self.__lines[0..self.count];
+        }
+
+        pub fn iteratorAt(self: Self, line: usize) LineIterator(T) {
+            return LineIterator(T){
+                .__current = null,
+                .__data = self.__lines,
+                .__max_length = self.count,
+                .__starting_position = line,
+            };
         }
 
         pub fn append(self: *Self, allocator: *mem.Allocator, lines_to_add: ConstLines) !void {
