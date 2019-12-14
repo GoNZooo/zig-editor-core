@@ -121,28 +121,30 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
             var seen_space = !(starting_character != ' ');
             var seen_non_word_character = nonWordCharacter(starting_character);
 
-            for (buffer.lines()[cursor.line..]) |l, line| {
+            for (buffer.lines()[cursor.line..]) |l, line_index| {
+                const line = cursor.line + line_index;
+
                 if (l.isEmpty()) {
-                    return Cursor{
-                        .line = @intCast(u32, line + cursor.line),
-                        .column = 0,
-                    };
+                    return Cursor{ .line = @intCast(u32, line), .column = 0 };
                 }
 
                 for (l.sliceConst()[column..]) |c| {
                     if (seen_space and c != ' ') {
                         return Cursor{
-                            .line = @intCast(u32, line + cursor.line),
+                            .line = @intCast(u32, line),
                             .column = @intCast(u32, column),
                         };
                     }
+
                     if (nonWordCharacter(c) and !seen_non_word_character) {
                         return Cursor{
-                            .line = @intCast(u32, line + cursor.line),
+                            .line = @intCast(u32, line),
                             .column = @intCast(u32, column),
                         };
                     }
+
                     if (c == ' ') seen_space = true;
+
                     column += 1;
                 }
 
