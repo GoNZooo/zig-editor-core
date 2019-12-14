@@ -130,17 +130,11 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
 
                 for (l.sliceConst()[column..]) |c| {
                     if (seen_space and c != ' ') {
-                        return Cursor{
-                            .line = @intCast(u32, line),
-                            .column = @intCast(u32, column),
-                        };
+                        return Cursor{ .line = @intCast(u32, line), .column = column };
                     }
 
                     if (nonWordCharacter(c) and !seen_non_word_character) {
-                        return Cursor{
-                            .line = @intCast(u32, line),
-                            .column = @intCast(u32, column),
-                        };
+                        return Cursor{ .line = @intCast(u32, line), .column = column };
                     }
 
                     if (c == ' ') seen_space = true;
