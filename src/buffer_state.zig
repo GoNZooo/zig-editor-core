@@ -116,14 +116,13 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
             }
 
             var column = cursor.column;
+            var line = cursor.line;
 
             const starting_character = buffer.lines()[cursor.line].sliceConst()[cursor.column];
             var seen_space = !(starting_character != ' ');
             var seen_non_word_character = nonWordCharacter(starting_character);
 
-            for (buffer.lines()[cursor.line..]) |l, line_index| {
-                const line = cursor.line + line_index;
-
+            for (buffer.lines()[cursor.line..]) |l| {
                 if (l.isEmpty()) {
                     return Cursor{ .line = @intCast(u32, line), .column = 0 };
                 }
@@ -145,6 +144,7 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
                 // we've reached the end of a line; newline counts as having seen a space here
                 seen_space = true;
                 column = 0;
+                line += 1;
             }
 
             // if we couldn't actually find a result, just return the cursor we had
