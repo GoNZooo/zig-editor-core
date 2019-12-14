@@ -74,7 +74,7 @@ test "supports `loadRelativeFile`" {
     testing.expectEqualSlices(u8, line5, "devil, you");
 }
 
-test "`init` with `pathToRelativeFile` loads file immediately at creation" {
+test "`init` with `pathToRelativeFile` loads file immediately" {
     var state = try U8BufferState.init(
         direct_allocator,
         BufferStateOptions{
