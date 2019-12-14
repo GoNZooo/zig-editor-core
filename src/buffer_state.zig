@@ -101,7 +101,10 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
         fn handleMotion(self: *Self, motion: vim.Motion) void {
             switch (motion) {
                 .UntilNextWord => |range| {
-                    self.cursor = findNextWord(self.cursor, self.buffer);
+                    var i: u32 = 0;
+                    while (i < range) : (i += 1) {
+                        self.cursor = findNextWord(self.cursor, self.buffer);
+                    }
                 },
                 else => unreachable,
             }
