@@ -110,6 +110,7 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
             }
         }
 
+        // @TODO: simplify this
         fn findNextWord(cursor: Cursor, buffer: FileBuffer(T, tFromU8)) Cursor {
             if (buffer.lines()[cursor.line].isEmpty()) {
                 return Cursor{ .line = cursor.line + 1, .column = 0 };
