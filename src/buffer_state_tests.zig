@@ -106,3 +106,49 @@ test "`init` with `pathToRelativeFile` loads file immediately at creation" {
     const line5 = lines[4].sliceConst();
     testing.expectEqualSlices(u8, line5, "devil, you");
 }
+
+test "`handleKey` handles `w` properly" {
+    var state = try U8BufferState.init(
+        direct_allocator,
+        BufferStateOptions{
+            .pathToRelativeFile = test_file_path,
+            .from_file_options = FromFileOptions{
+                .max_size = 128,
+            },
+        },
+        FileBufferOptions{},
+    );
+
+    testing.expectEqual(state.cursor.column, 0);
+    testing.expectEqual(state.cursor.line, 0);
+
+    const key = vim.Key{ .key_code = 'w' };
+
+    try state.handleKey(key);
+    testing.expectEqual(state.cursor.line, 1);
+    testing.expectEqual(state.cursor.column, 0);
+
+    try state.handleKey(key);
+    testing.expectEqual(state.cursor.line, 2);
+    testing.expectEqual(state.cursor.column, 0);
+
+    try state.handleKey(key);
+    testing.expectEqual(state.cursor.line, 3);
+    testing.expectEqual(state.cursor.column, 0);
+
+    try state.handleKey(key);
+    testing.expectEqual(state.cursor.line, 3);
+    testing.expectEqual(state.cursor.column, 4);
+
+    try state.handleKey(key);
+    testing.expectEqual(state.cursor.line, 4);
+    testing.expectEqual(state.cursor.column, 0);
+
+    try state.handleKey(key);
+    testing.expectEqual(state.cursor.line, 4);
+    testing.expectEqual(state.cursor.column, 5);
+
+    try state.handleKey(key);
+    testing.expectEqual(state.cursor.line, 4);
+    testing.expectEqual(state.cursor.column, 7);
+}

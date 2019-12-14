@@ -8,7 +8,7 @@ const String = @import("./string.zig").String;
 const std = @import("std");
 const mem = std.mem;
 
-const CursorPosition = struct {
+const Cursor = struct {
     column: u32,
     line: u32,
 };
@@ -26,7 +26,7 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
 
         buffer: FileBuffer(T, tFromU8),
         vim_state: vim.State,
-        cursor: CursorPosition,
+        cursor: Cursor,
         allocator: *mem.Allocator,
 
         pub fn init(
@@ -52,7 +52,7 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
             return Self{
                 .buffer = buffer,
                 .vim_state = vim.State.start(),
-                .cursor = CursorPosition{ .column = 0, .line = 0 },
+                .cursor = Cursor{ .column = 0, .line = 0 },
                 .allocator = allocator,
             };
         }
@@ -77,5 +77,86 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
             );
             self.buffer = buffer;
         }
+
+        pub fn setCursor(self: *Self, cursor: Cursor) void {
+            self.cursor = cursor;
+        }
+
+        pub fn handleKey(self: *Self, key: vim.Key) !void {
+            if (try vim.handleKey(self.allocator, key, &self.vim_state)) |command| {
+                switch (command) {
+                    .MotionOnly => |command_data| {
+                        self.handleMotion(command_data.motion);
+                    },
+                    .Unset, .Undo, .Redo, .EnterInsertMode, .ExitInsertMode => unreachable,
+                    .BeginMacro, .EndMacro => unreachable,
+                    .InsertUpwards, .InsertDownwards, .ReplaceInsert, .Insert => unreachable,
+                    .Delete, .Yank, .Change => unreachable,
+                    .PasteForwards, .PasteBackwards, .SetMark, .Comment => unreachable,
+                    .ScrollTop, .ScrollCenter, .ScrollBottom, .BringLineUp => unreachable,
+                }
+            }
+        }
+
+        fn handleMotion(self: *Self, motion: vim.Motion) void {
+            switch (motion) {
+                .UntilNextWord => |range| {
+                    self.cursor = findNextWord(self.cursor, self.buffer);
+                },
+                else => unreachable,
+            }
+        }
+
+        fn findNextWord(cursor: Cursor, buffer: FileBuffer(T, tFromU8)) Cursor {
+            if (buffer.lines()[cursor.line].isEmpty()) {
+                return Cursor{ .line = cursor.line + 1, .column = 0 };
+            }
+
+            var column = cursor.column;
+
+            const starting_character = buffer.lines()[cursor.line].sliceConst()[cursor.column];
+            var seen_space = !(starting_character != ' ');
+            var seen_non_word_character = nonWordCharacter(starting_character);
+
+            for (buffer.lines()[cursor.line..]) |l, line| {
+                if (l.isEmpty()) {
+                    return Cursor{
+                        .line = @intCast(u32, line + cursor.line),
+                        .column = 0,
+                    };
+                }
+
+                for (l.sliceConst()[column..]) |c| {
+                    if (seen_space and c != ' ') {
+                        return Cursor{
+                            .line = @intCast(u32, line + cursor.line),
+                            .column = @intCast(u32, column),
+                        };
+                    }
+                    if (nonWordCharacter(c) and !seen_non_word_character) {
+                        return Cursor{
+                            .line = @intCast(u32, line + cursor.line),
+                            .column = @intCast(u32, column),
+                        };
+                    }
+                    if (c == ' ') seen_space = true;
+                    column += 1;
+                }
+
+                // we've reached the end of a line; newline counts as having seen a space here
+                seen_space = true;
+                column = 0;
+            }
+
+            // if we couldn't actually find a result, just return the cursor we had
+            return cursor;
+        }
+    };
+}
+
+fn nonWordCharacter(c: u8) bool {
+    return switch (c) {
+        ',', '.', '-', '(', ')', '/' => true,
+        else => false,
     };
 }

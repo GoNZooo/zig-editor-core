@@ -15,6 +15,40 @@ pub const DeleteOptions = struct {
     shrink: bool = false,
 };
 
+pub fn StringIterator(comptime T: type) type {
+    return struct {
+        const Self = @This();
+
+        __current: ?usize,
+        __max_length: usize,
+        __data: []T,
+
+        pub fn next(self: *Self) ?T {
+            self.__current = if (self.__current) |c| c + 1 else 0;
+            // std.debug.warn("self.__data: {}\n", self.__data);
+            // std.debug.warn("self.__max_length: {}\n", self.__max_length);
+
+            return if (self.__current.? >= self.__max_length) null else self.__data[self.__current.?];
+        }
+
+        pub fn peek(self: Self) ?T {
+            if (self.__current) |current| {
+                return if (current >= self.__max_length) null else self.__data[current];
+            } else {
+                return null;
+            }
+        }
+
+        pub fn peekNext(self: Self) ?T {
+            if (self.__current) |current| {
+                return if (current + 1 >= self.__max_length) null else self.__data[current + 1];
+            } else {
+                return self.__data[0];
+            }
+        }
+    };
+}
+
 pub fn String(comptime T: type) type {
     // @TODO: Figure out if a way of calculating new capacity is general enough where it should be
     // the default instead of "only what's needed". Alternatively, create different modes, i.e.;
@@ -216,6 +250,18 @@ pub fn String(comptime T: type) type {
         /// Returns an immutable copy of the contents of the `String(T)`.
         pub fn sliceConst(self: Self) ConstSlice {
             return self.__chars[0..self.count];
+        }
+
+        pub fn iteratorConst(self: Self) StringIterator(T) {
+            return StringIterator(T){
+                .__current = null,
+                .__max_length = self.count,
+                .__data = self.__chars,
+            };
+        }
+
+        pub fn isEmpty(self: Self) bool {
+            return self.count == 0;
         }
 
         /// Creates a `String(T)` from a format string.
