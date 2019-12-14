@@ -123,33 +123,63 @@ test "`handleKey` handles `w` properly" {
     testing.expectEqual(state.cursor.column, 0);
     testing.expectEqual(state.cursor.line, 0);
 
-    const key = vim.Key{ .key_code = 'w' };
+    const w = vim.Key{ .key_code = 'w' };
 
-    try state.handleKey(key);
+    try state.handleKey(w);
     testing.expectEqual(state.cursor.line, 1);
     testing.expectEqual(state.cursor.column, 0);
 
-    try state.handleKey(key);
+    try state.handleKey(w);
     testing.expectEqual(state.cursor.line, 2);
     testing.expectEqual(state.cursor.column, 0);
 
-    try state.handleKey(key);
+    try state.handleKey(w);
     testing.expectEqual(state.cursor.line, 3);
     testing.expectEqual(state.cursor.column, 0);
 
-    try state.handleKey(key);
+    try state.handleKey(w);
     testing.expectEqual(state.cursor.line, 3);
     testing.expectEqual(state.cursor.column, 4);
 
-    try state.handleKey(key);
+    try state.handleKey(w);
     testing.expectEqual(state.cursor.line, 4);
     testing.expectEqual(state.cursor.column, 0);
 
-    try state.handleKey(key);
+    try state.handleKey(w);
     testing.expectEqual(state.cursor.line, 4);
     testing.expectEqual(state.cursor.column, 5);
 
-    try state.handleKey(key);
+    try state.handleKey(w);
     testing.expectEqual(state.cursor.line, 4);
     testing.expectEqual(state.cursor.column, 7);
+
+    const b = vim.Key{ .key_code = 'b' };
+
+    try state.handleKey(b);
+    testing.expectEqual(state.cursor.line, 4);
+    testing.expectEqual(state.cursor.column, 5);
+
+    try state.handleKey(b);
+    testing.expectEqual(state.cursor.line, 4);
+    testing.expectEqual(state.cursor.column, 0);
+
+    try state.handleKey(b);
+    testing.expectEqual(state.cursor.line, 3);
+    testing.expectEqual(state.cursor.column, 4);
+
+    try state.handleKey(b);
+    testing.expectEqual(state.cursor.line, 3);
+    testing.expectEqual(state.cursor.column, 0);
+
+    try state.handleKey(b);
+    testing.expectEqual(state.cursor.line, 2);
+    testing.expectEqual(state.cursor.column, 0);
+
+    try state.handleKey(b);
+    testing.expectEqual(state.cursor.line, 1);
+    testing.expectEqual(state.cursor.column, 0);
+
+    try state.handleKey(b);
+    testing.expectEqual(state.cursor.line, 0);
+    testing.expectEqual(state.cursor.column, 0);
 }

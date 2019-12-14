@@ -9,8 +9,8 @@ const std = @import("std");
 const mem = std.mem;
 
 const Cursor = struct {
-    column: u32,
-    line: u32,
+    column: usize,
+    line: usize,
 };
 
 pub const BufferStateOptions = struct {
@@ -106,6 +106,12 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
                         self.cursor = findNextWord(self.cursor, self.buffer);
                     }
                 },
+                .UntilPreviousWord => |range| {
+                    var i: u32 = 0;
+                    while (i < range) : (i += 1) {
+                        self.cursor = findPreviousWord(self.cursor, self.buffer);
+                    }
+                },
                 else => unreachable,
             }
         }
@@ -125,16 +131,16 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
 
             for (buffer.lines()[cursor.line..]) |l| {
                 if (l.isEmpty()) {
-                    return Cursor{ .line = @intCast(u32, line), .column = 0 };
+                    return Cursor{ .line = line, .column = 0 };
                 }
 
                 for (l.sliceConst()[column..]) |c| {
                     if (seen_space and c != ' ') {
-                        return Cursor{ .line = @intCast(u32, line), .column = column };
+                        return Cursor{ .line = line, .column = column };
                     }
 
                     if (nonWordCharacter(c) and !seen_non_word_character) {
-                        return Cursor{ .line = @intCast(u32, line), .column = column };
+                        return Cursor{ .line = line, .column = column };
                     }
 
                     if (c == ' ') seen_space = true;
@@ -149,6 +155,63 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
             }
 
             // if we couldn't actually find a result, just return the cursor we had
+            return cursor;
+        }
+
+        fn findPreviousWord(cursor: Cursor, buffer: FileBuffer(T, tFromU8)) Cursor {
+            if (buffer.lines()[cursor.line].isEmpty()) {
+                return Cursor{ .line = cursor.line - 1, .column = 0 };
+            }
+
+            var column: ?usize = cursor.column;
+            var line = cursor.line;
+
+            const starting_character = buffer.lines()[cursor.line].sliceConst()[cursor.column];
+            var seen_space = starting_character == ' ';
+            var seen_non_word_character = nonWordCharacter(starting_character);
+
+            var first_iteration = true;
+            var line_iterator = buffer.iteratorAt(line);
+            while (line_iterator.previous()) |l| : (line -= 1) {
+                if (l.isEmpty()) {
+                    return Cursor{ .line = line, .column = 0 };
+                }
+
+                var column_iterator = it: {
+                    if (column) |c| {
+                        break :it l.iteratorAt(c);
+                    } else {
+                        var it = l.iteratorFromEnd();
+                        column = it.column();
+                        break :it it;
+                    }
+                };
+
+                while (column_iterator.previous()) |c| {
+                    if (seen_space) {
+                        if (column_iterator.peekPrevious()) |previous_character| {
+                            if (previous_character == ' ') {
+                                return Cursor{ .line = line, .column = column_iterator.column() };
+                            }
+                        }
+                    }
+
+                    if ((seen_space or seen_non_word_character) and column_iterator.peekPrevious() == null) {
+                        // we're about to hit a newline, stop here
+                        return Cursor{ .line = line, .column = column_iterator.column() };
+                    }
+
+                    if (nonWordCharacter(c) and !seen_non_word_character) {
+                        return Cursor{ .line = line, .column = column_iterator.column() };
+                    }
+
+                    if (c == ' ') seen_space = true;
+                }
+
+                seen_space = true;
+                column = null;
+            }
+
             return cursor;
         }
     };
