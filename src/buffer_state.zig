@@ -155,6 +155,7 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
 
 fn nonWordCharacter(c: u8) bool {
     return switch (c) {
+        // @TODO: make this a proper list of symbols that are themselves word stoppers
         ',', '.', '-', '(', ')', '/' => true,
         else => false,
     };
