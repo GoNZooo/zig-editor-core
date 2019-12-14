@@ -107,7 +107,6 @@ test "`init` with `pathToRelativeFile` loads file immediately" {
     testing.expectEqualSlices(u8, line5, "devil, you");
 }
 
-// @TODO: make `b` an equal amount of times go backwards in these test results
 test "`handleKey` handles `w` properly" {
     var state = try U8BufferState.init(
         direct_allocator,
