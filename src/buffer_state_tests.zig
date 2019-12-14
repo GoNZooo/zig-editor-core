@@ -182,3 +182,5 @@ test "`handleKey` handles `w` properly" {
     testing.expectEqual(state.cursor.line, 0);
     testing.expectEqual(state.cursor.column, 0);
 }
+
+// @TODO: add tests for ranged "Until..." motions
