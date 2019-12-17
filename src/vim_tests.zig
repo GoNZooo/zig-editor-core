@@ -27,7 +27,7 @@ test "`dd` creates a delete command" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const command = command_slice[0];
     testing.expect(std.meta.activeTag(command) == Command.Delete);
@@ -50,7 +50,7 @@ test "`dddd` = two delete commands" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 2);
+    testing.expectEqual(commands.len, 2);
     const command_slice = commands.toSliceConst();
     for (command_slice) |command| {
         testing.expect(std.meta.activeTag(command) == Command.Delete);
@@ -74,7 +74,7 @@ test "`ddde` = two delete commands, last one until end of word" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 2);
+    testing.expectEqual(commands.len, 2);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     const second_command = command_slice[1];
@@ -111,7 +111,7 @@ test "`dw` = 'delete until next word'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -134,7 +134,7 @@ test "`w` = 'move forward one word'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
@@ -157,7 +157,7 @@ test "`b` = 'move back one word'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
@@ -180,7 +180,7 @@ test "`51w` = 'move forward 51 words'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
@@ -203,7 +203,7 @@ test "`51b` = 'move back 51 words'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
@@ -226,7 +226,7 @@ test "`dj` = 'delete one line downwards'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -249,7 +249,7 @@ test "`dk` = 'delete one line upwards'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -272,7 +272,7 @@ test "`5dj` = 'delete 5 lines downwards'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -295,7 +295,7 @@ test "`5dk` = 'delete 5 lines upwards'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -318,7 +318,7 @@ test "`5dd` = 'delete 4 lines downwards'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -341,7 +341,7 @@ test "`52dd` = 'delete 51 lines downwards'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -364,7 +364,7 @@ test "`52dj` = 'delete 52 lines downwards'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -387,7 +387,7 @@ test "`5232dj` = 'delete 5232 lines downwards'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -410,7 +410,7 @@ test "`5232dj2301dk` = 'delete 5232 lines downwards' & 'delete 2301 lines upward
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 2);
+    testing.expectEqual(commands.len, 2);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     const second_command = command_slice[1];
@@ -447,7 +447,7 @@ test "`5232yy` = 'yank 5231 lines downwards'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Yank);
@@ -470,7 +470,7 @@ test "`522yj201yk` = 'yank 522 lines downwards' & 'yank 231 lines upwards'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 2);
+    testing.expectEqual(commands.len, 2);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     const second_command = command_slice[1];
@@ -507,7 +507,7 @@ test "`df)` = 'delete to and including )'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -530,7 +530,7 @@ test "`dF)` = 'delete back to and including )'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -553,7 +553,7 @@ test "`dt)` = 'delete to but excluding )'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -576,7 +576,7 @@ test "`dT)` = 'delete back to but excluding )'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -599,7 +599,7 @@ test "`\"add` = 'delete current line into register a'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -623,7 +623,7 @@ test "`\"+5dj` = 'delete 5 lines down into register +'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -647,7 +647,7 @@ test "`p` = 'paste forwards'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.PasteForwards);
@@ -665,7 +665,7 @@ test "`\"a3P` = 'paste backwards 3 times from register a'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.PasteBackwards);
@@ -683,7 +683,7 @@ test "`d$` = 'delete until end of line'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -707,7 +707,7 @@ test "`d^` = 'delete until beginning of line'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -731,7 +731,7 @@ test "`cc` = 'change current line'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Change);
@@ -755,7 +755,7 @@ test "`cfe` = 'change until e forwards'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Change);
@@ -779,7 +779,7 @@ test "`\"*cT$` = 'change backwards until but excluding the character $ into regi
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Change);
@@ -803,7 +803,7 @@ test "`15c$` = 'change to end of line downwards 14 lines'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Change);
@@ -827,7 +827,7 @@ test "`15j` = 'move down 15 lines'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
@@ -851,7 +851,7 @@ test "`14$` = 'move to the end of the line, 14 lines down'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
@@ -875,7 +875,7 @@ test "`3f\"` = 'move to the third ocurrence forwards of \"'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
@@ -899,7 +899,7 @@ test "`150F(` = 'move unto the 150th ocurrence backwards of ('" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
@@ -923,7 +923,7 @@ test "`2T(` = 'move to the 2nd ocurrence backwards of ('" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
@@ -947,7 +947,7 @@ test "`15t)` = 'move to the 15th ocurrence forwards of )'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
@@ -971,7 +971,7 @@ test "`\"u2d}` = 'delete 2 paragraphs forwards into register u'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -995,7 +995,7 @@ test "`\"o15y{` = 'yank 15 paragraphs backwards into register o'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Yank);
@@ -1019,7 +1019,7 @@ test "`}2{` = 'go forward one paragraph, go back two paragraphs'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 2);
+    testing.expectEqual(commands.len, 2);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     const second_command = command_slice[1];
@@ -1057,7 +1057,7 @@ test "`\"ay0\"a3p` = 'yank until column zero into register a, paste from registe
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 2);
+    testing.expectEqual(commands.len, 2);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     const second_command = command_slice[1];
@@ -1083,7 +1083,7 @@ test "`maj'a` = 'set mark a, move one line down, move to mark a's line'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 3);
+    testing.expectEqual(commands.len, 3);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     const second_command = command_slice[1];
@@ -1125,7 +1125,7 @@ test "`maj`a` = 'set mark a, move one line down, move to mark a's position'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 3);
+    testing.expectEqual(commands.len, 3);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     const second_command = command_slice[1];
@@ -1167,7 +1167,7 @@ test "`d`a` = 'delete until mark a's position'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -1190,7 +1190,7 @@ test "`d'a` = 'delete until mark a's line'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -1213,7 +1213,7 @@ test "`9l22h` = 'go forward 9 characters, go back 22 characters'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 2);
+    testing.expectEqual(commands.len, 2);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     const second_command = command_slice[1];
@@ -1251,7 +1251,7 @@ test "`\"aci\"` = 'change inside double quotes and save old content to register 
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Change);
@@ -1275,7 +1275,7 @@ test "`\"adi\"15k\"a2p` = 'delete inside double quotes into register a, move up,
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 3);
+    testing.expectEqual(commands.len, 3);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     const second_command = command_slice[1];
@@ -1322,7 +1322,7 @@ test "`cs\"` = 'change surrounding double quotes" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Change);
@@ -1346,7 +1346,7 @@ test "`ds\"` = 'delete surrounding double quotes" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -1370,7 +1370,7 @@ test "`dG` = 'delete until end of file'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -1394,7 +1394,7 @@ test "`G` = 'go to end of file'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
@@ -1418,7 +1418,7 @@ test "`15G` = 'go to end of file'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
@@ -1442,7 +1442,7 @@ test "`\"ad15G` = 'delete until line 15 of file into register a'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -1466,7 +1466,7 @@ test "`d15G` = 'delete until line 15 of file'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -1490,7 +1490,7 @@ test "`dgg` = 'delete until beginning of file'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -1514,7 +1514,7 @@ test "`gg` = 'go to beginning of file'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
@@ -1538,7 +1538,7 @@ test "`15gg` = 'go to line 15 of file'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
@@ -1562,7 +1562,7 @@ test "`\"ad15gg` = 'delete until line 15 of file into register a'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -1586,7 +1586,7 @@ test "`d15gg` = 'delete until line 15 of file'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Delete);
@@ -1610,7 +1610,7 @@ test "`gc20j` = 'comment downwards 20 lines'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Comment);
@@ -1633,7 +1633,7 @@ test "`20gcj` = 'comment downwards 20 lines'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Comment);
@@ -1656,7 +1656,7 @@ test "`gc%` = 'comment until matching token'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Comment);
@@ -1673,7 +1673,7 @@ test "`J` = 'bring line up'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.BringLineUp);
@@ -1690,7 +1690,7 @@ test "`25J` = 'bring line up'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.BringLineUp);
@@ -1707,7 +1707,7 @@ test "`u` = 'undo'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Undo);
@@ -1760,7 +1760,7 @@ test "`igaf%C-[` = 'enter insert mode, then exit it'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 6);
+    testing.expectEqual(commands.len, 6);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.EnterInsertMode);
@@ -1789,7 +1789,7 @@ test "`sgaf%C-[` = 'replace current character, then exit insert mode'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 6);
+    testing.expectEqual(commands.len, 6);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.ReplaceInsert);
@@ -1819,7 +1819,7 @@ test "`3sgaf%C-[` = 'replace three characters, then exit insert mode'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 6);
+    testing.expectEqual(commands.len, 6);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.ReplaceInsert);
@@ -1850,7 +1850,7 @@ test "`\"a3sgaf%C-[` = 'replace three characters, then exit insert mode'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 6);
+    testing.expectEqual(commands.len, 6);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.ReplaceInsert);
@@ -1881,7 +1881,7 @@ test "`ogaf%C-[` = 'insert on new line downwards, then exit insert mode'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 6);
+    testing.expectEqual(commands.len, 6);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.InsertDownwards);
@@ -1910,7 +1910,7 @@ test "`265ogaf%C-[` = 'insert on new line downwards, then exit insert mode'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 6);
+    testing.expectEqual(commands.len, 6);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.InsertDownwards);
@@ -1940,7 +1940,7 @@ test "`Ogaf%C-[` = 'insert on new line upwards, then exit insert mode'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 6);
+    testing.expectEqual(commands.len, 6);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.InsertUpwards);
@@ -1969,7 +1969,7 @@ test "`15Ogaf%C-[` = 'insert on new line upwards, then exit insert mode'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 6);
+    testing.expectEqual(commands.len, 6);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.InsertUpwards);
@@ -1999,7 +1999,7 @@ test "`zt` = 'scroll view so that cursor is at top'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.ScrollTop);
@@ -2010,7 +2010,7 @@ test "`zz` = 'scroll view so that cursor is at center'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.ScrollCenter);
@@ -2021,7 +2021,7 @@ test "`zb` = 'scroll view so that cursor is at bottom'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 1);
+    testing.expectEqual(commands.len, 1);
     const command_slice = commands.toSliceConst();
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.ScrollBottom);
@@ -2032,7 +2032,7 @@ test "`qawibC-[q` = 'record macro into 'a'; insert 'b', escape'" {
     const keys = stringToKeys(input.len, input);
     var state = State.start();
     const commands = try vim.handleKeys(direct_allocator, &keys, &state);
-    testing.expectEqual(commands.count(), 6);
+    testing.expectEqual(commands.len, 6);
     const command_slice = commands.toSliceConst();
 
     const first_command = command_slice[0];
