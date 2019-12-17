@@ -358,7 +358,7 @@ pub fn String(comptime T: type) type {
             comptime Errors: type,
             output: fn (@TypeOf(context), []const u8) Errors!void,
         ) Errors!void {
-            return fmt.format(context, Errors, output, "{}", self.__chars[0..self.count]);
+            return fmt.format(context, Errors, output, "{}", .{self.__chars[0..self.count]});
         }
 
         fn getRequiredCapacity(self: Self, slice: ConstSlice) usize {
