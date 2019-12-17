@@ -168,7 +168,7 @@ pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyEr
                     return null;
                 },
                 else => {
-                    debugPanic("unknown register: {}\n", key.key_code);
+                    debugPanic("unknown register: {}\n", .{key.key_code});
 
                     return error.UnknownRegister;
                 },
@@ -265,7 +265,7 @@ fn commandFromKey(key: Key, register: ?u8, range: ?u32) !Command {
         return switch (key.key_code) {
             'r' => Command{ .Redo = undefined },
             else => err: {
-                debugPanic("unsupported command key with left control: {}\n", key.key_code);
+                debugPanic("unsupported command key with left control: {}\n", .{key.key_code});
 
                 break :err error.UnsupportedLeftControlCommand;
             },
@@ -407,7 +407,7 @@ fn commandFromKey(key: Key, register: ?u8, range: ?u32) !Command {
         'o' => Command{ .InsertDownwards = range orelse 1 },
         'O' => Command{ .InsertUpwards = range orelse 1 },
         else => {
-            debugPanic("unsupported command key: {}\n", key.key_code);
+            debugPanic("unsupported command key: {}\n", .{key.key_code});
 
             return error.UnsupportedCommand;
         },
@@ -439,7 +439,7 @@ fn motionFromKey(key: Key, builder_data: CommandBuilderData) !Motion {
         'G' => Motion{ .UntilEndOfFile = builder_data.range orelse 0 },
         '%' => Motion{ .ToMatching = undefined },
         else => {
-            debugPanic("unsupported motion: {c}\n", key.key_code);
+            debugPanic("unsupported motion: {c}\n", .{key.key_code});
 
             return error.UnsupportedMotion;
         },
@@ -486,7 +486,7 @@ fn gCommandFromKey(key: Key, state: *State) !?Command {
                         .BeginMacro,
                         .EndMacro,
                         => {
-                            debugPanic("invalid g command state: {}\n", builder_data.command);
+                            debugPanic("invalid g command state: {}\n", .{builder_data.command});
 
                             return error.InvalidGCommandState;
                         },
@@ -506,7 +506,7 @@ fn gCommandFromKey(key: Key, state: *State) !?Command {
                     break :outer null;
                 },
                 else => {
-                    debugPanic("unsupported G command: {c}\n", key.key_code);
+                    debugPanic("unsupported G command: {c}\n", .{key.key_code});
 
                     return error.UnsupportedGCommand;
                 },
@@ -536,7 +536,7 @@ fn zCommandFromKey(key: Key, state: *State) !?Command {
                     break :outer Command{ .ScrollBottom = undefined };
                 },
                 else => {
-                    debugPanic("unsupported Z command: {c}\n", key.key_code);
+                    debugPanic("unsupported Z command: {c}\n", .{key.key_code});
                     return error.UnsupportedZCommand;
                 },
             }
@@ -649,7 +649,7 @@ fn handleStart(builder_data: *CommandBuilderData, state: *State, key: Key) !?Com
         else => {
             debugPanic(
                 "Not expecting character '{c}', waiting for command or range modifier",
-                key.key_code,
+                .{key.key_code},
             );
 
             return error.UnexpectedStartKey;
@@ -700,7 +700,7 @@ fn handleWaitingForMark(builder_data: *CommandBuilderData, state: *State, key: K
                 => {
                     debugPanic(
                         "invalid motion for `WaitingForMark`: {}\n",
-                        command_data.motion,
+                        .{command_data.motion},
                     );
 
                     return error.InvalidWaitingForMarkMotion;
@@ -727,7 +727,7 @@ fn handleWaitingForMark(builder_data: *CommandBuilderData, state: *State, key: K
         => {
             debugPanic(
                 "Invalid command for `WaitingForMark`: {}\n",
-                builder_data.command,
+                .{builder_data.command},
             );
 
             return error.InvalidWaitingForMarkCommand;
@@ -778,7 +778,7 @@ fn handleWaitingForTarget(builder_data: *CommandBuilderData, state: *State, key:
                 => {
                     debugPanic(
                         "non-target motion waiting for target: {}\n",
-                        command_data.motion,
+                        .{command_data.motion},
                     );
 
                     return error.InvalidWaitingForTargetMotion;
@@ -805,13 +805,13 @@ fn handleWaitingForTarget(builder_data: *CommandBuilderData, state: *State, key:
         => {
             debugPanic(
                 "invalid command for `WaitingForTarget`: {}\n",
-                builder_data.command,
+                .{builder_data.command},
             );
 
             return error.InvalidWaitingForTargetCommand;
         },
         .Unset => {
-            debugPanic("no command set when waiting for target");
+            debugPanic("no command set when waiting for target", .{});
 
             return error.NoCommandWhenWaitingForTarget;
         },
@@ -887,7 +887,7 @@ fn handleWaitingForMotion(builder_data: *CommandBuilderData, state: *State, key:
                     return null;
                 },
                 else => {
-                    debugPanic("unimplemented motion: {c}\n", key.key_code);
+                    debugPanic("unimplemented motion: {c}\n", .{key.key_code});
 
                     return error.UnimplementedMotion;
                 },
@@ -914,13 +914,13 @@ fn handleWaitingForMotion(builder_data: *CommandBuilderData, state: *State, key:
         => {
             debugPanic(
                 "invalid command for `WaitingForMotion`: {}\n",
-                builder_data.command,
+                .{builder_data.command},
             );
 
             return error.InvalidWaitingForMotionCommand;
         },
         .Unset => {
-            debugPanic("no command when waiting for motion");
+            debugPanic("no command when waiting for motion", .{});
 
             return error.NoCommandWhenWaitingForMotion;
         },
@@ -950,7 +950,7 @@ fn handleWaitingForSlot(
             return command;
         },
         else => {
-            debugPanic("unknown macro slot: {}\n", key.key_code);
+            debugPanic("unknown macro slot: {}\n", .{key.key_code});
 
             return error.UnknownMacroSlot;
         },
@@ -959,7 +959,7 @@ fn handleWaitingForSlot(
 
 pub const ESCAPE_KEY = Key{ .key_code = '\x1b' };
 
-fn debugPanic(comptime format: []const u8, args: ...) void {
+fn debugPanic(comptime format: []const u8, args: var) void {
     switch (std.builtin.mode) {
         .Debug => std.debug.panic(format, args),
         else => {},

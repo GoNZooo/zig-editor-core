@@ -1720,7 +1720,7 @@ test "`C-r` = 'redo'" {
     if (command) |c| {
         testing.expect(std.meta.activeTag(c) == Command.Redo);
     } else {
-        std.debug.panic("No command when expecting one.");
+        std.debug.panic("No command when expecting one.", .{});
     }
 }
 
@@ -1732,7 +1732,7 @@ test "`i` = 'enter insert mode' & state is modified to be in insert mode after" 
         testing.expect(std.meta.activeTag(state) == State.InInsertMode);
         testing.expect(std.meta.activeTag(command) == Command.EnterInsertMode);
     } else {
-        std.debug.panic("No command when expecting one.");
+        std.debug.panic("No command when expecting one.", .{});
     }
 }
 
@@ -1744,14 +1744,14 @@ test "`iC-[` = 'enter insert mode, then exit it'" {
         testing.expect(std.meta.activeTag(state) == State.InInsertMode);
         testing.expect(std.meta.activeTag(command) == Command.EnterInsertMode);
     } else {
-        std.debug.panic("No command when expecting one.");
+        std.debug.panic("No command when expecting one.", .{});
     }
     const maybeCommand2 = try vim.handleKey(direct_allocator, vim.ESCAPE_KEY, &state);
     if (maybeCommand2) |command| {
         testing.expect(std.meta.activeTag(state) == State.Start);
         testing.expect(std.meta.activeTag(command) == Command.ExitInsertMode);
     } else {
-        std.debug.panic("No command when expecting one.");
+        std.debug.panic("No command when expecting one.", .{});
     }
 }
 
