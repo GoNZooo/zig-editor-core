@@ -319,7 +319,7 @@ pub fn String(comptime T: type) type {
         pub fn fromFormat(
             allocator: *mem.Allocator,
             comptime format_string: []const u8,
-            args: ...,
+            args: var,
         ) !Self {
             const chars = try fmt.allocPrint(direct_allocator, format_string, args);
             const capacity = chars.len;
@@ -356,13 +356,13 @@ pub fn String(comptime T: type) type {
             options: fmt.FormatOptions,
             context: var,
             comptime Errors: type,
-            output: fn (@typeOf(context), []const u8) Errors!void,
+            output: fn (@TypeOf(context), []const u8) Errors!void,
         ) Errors!void {
             return fmt.format(context, Errors, output, "{}", self.__chars[0..self.count]);
         }
 
         fn getRequiredCapacity(self: Self, slice: ConstSlice) usize {
-            return utilities.max(@typeOf(self.capacity), self.capacity, self.count + slice.len);
+            return utilities.max(@TypeOf(self.capacity), self.capacity, self.count + slice.len);
         }
     };
 }
@@ -451,8 +451,7 @@ test "`format` returns a custom format instead of everything" {
     var format_output = try fmt.allocPrint(
         direct_allocator,
         "{}! {}!",
-        string2,
-        @as(u1, 1),
+        .{ string2, @as(u1, 1) },
     );
 
     testing.expectEqualSlices(u8, format_output, "hello! 1!");
@@ -477,10 +476,7 @@ test "`fromFormat` returns a correct `String`" {
     const string_from_format = try String(u8).fromFormat(
         direct_allocator,
         "/home/{}/{}:{}:{}",
-        username,
-        filename,
-        @as(u8, line),
-        @as(u8, column),
+        .{ username, filename, @as(u8, line), @as(u8, column) },
     );
     const expected_slice = "/home/gonz/.zshrc:5:3";
     const expected_capacity = expected_slice.len;
