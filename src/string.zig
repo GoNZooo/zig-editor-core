@@ -356,7 +356,7 @@ pub fn String(comptime T: type) type {
             options: fmt.FormatOptions,
             context: var,
             comptime Errors: type,
-            output: fn (@TypeOf(context), []const u8) Errors!void,
+            output: fn (context: @TypeOf(context), format_string: []const u8) Errors!void,
         ) Errors!void {
             return fmt.format(context, Errors, output, "{}", .{self.__chars[0..self.count]});
         }
