@@ -2,7 +2,6 @@ const std = @import("std");
 const mem = std.mem;
 const direct_allocator = std.heap.direct_allocator;
 const testing = std.testing;
-const utilities = @import("./utilities.zig");
 const String = @import("./string.zig").String;
 const assert = std.debug.assert;
 
@@ -281,7 +280,7 @@ pub fn FileBuffer(comptime T: type, comptime tFromU8: TFromU8Function(T)) type {
         }
 
         fn getRequiredCapacity(self: Self, lines_to_add: ConstLines) usize {
-            return utilities.max(usize, self.capacity, self.count + lines_to_add.len);
+            return std.math.max(self.capacity, self.count + lines_to_add.len);
         }
     };
 }

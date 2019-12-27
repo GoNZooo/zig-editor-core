@@ -5,7 +5,6 @@ const mem = std.mem;
 const fmt = std.fmt;
 const rand = std.rand;
 const assert = std.debug.assert;
-const utilities = @import("./utilities.zig");
 
 pub const StringInitOptions = struct {
     initial_capacity: ?usize = null,
@@ -362,7 +361,7 @@ pub fn String(comptime T: type) type {
         }
 
         fn getRequiredCapacity(self: Self, slice: ConstSlice) usize {
-            return utilities.max(@TypeOf(self.capacity), self.capacity, self.count + slice.len);
+            return std.math.max(self.capacity, self.count + slice.len);
         }
     };
 }
