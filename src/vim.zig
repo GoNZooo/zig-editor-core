@@ -190,7 +190,7 @@ pub fn handleKey(allocator: *mem.Allocator, key: Key, state: *State) HandleKeyEr
                     const command = Command{
                         .EndMacro = EndMacroData{
                             .slot = in_macro_data.slot,
-                            .commands = in_macro_data.commands.toSliceConst(),
+                            .commands = in_macro_data.commands.items,
                         },
                     };
                     // We destroy only the intermediate macro data state because it's internal.

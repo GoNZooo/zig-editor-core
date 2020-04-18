@@ -11,7 +11,7 @@ const String = @import("./string.zig").String;
 const FileBufferOptions = file_buffer.FileBufferOptions;
 
 const std = @import("std");
-const direct_allocator = std.heap.direct_allocator;
+const page_allocator = std.heap.page_allocator;
 const testing = std.testing;
 const meta = std.meta;
 
@@ -19,7 +19,7 @@ const U8BufferState = BufferState(String(u8), String(u8).copyConst);
 
 test "`init` works" {
     var state = try U8BufferState.init(
-        direct_allocator,
+        page_allocator,
         BufferStateOptions{},
         FileBufferOptions{},
     );
@@ -28,21 +28,21 @@ test "`init` works" {
 
 test "`deinit` works" {
     var state = try U8BufferState.init(
-        direct_allocator,
+        page_allocator,
         BufferStateOptions{},
         FileBufferOptions{},
     );
     state.deinit();
 }
 
-const test_file_path = switch (std.builtin.os) {
+const test_file_path = switch (std.builtin.os.tag) {
     .windows => "data\\file_buffer_tests\\test1.txt",
     else => "data/file_buffer_tests/test1.txt",
 };
 
 test "supports `loadRelativeFile`" {
     var state = try U8BufferState.init(
-        direct_allocator,
+        page_allocator,
         BufferStateOptions{},
         FileBufferOptions{},
     );
@@ -51,7 +51,7 @@ test "supports `loadRelativeFile`" {
     testing.expectEqual(state.cursor.line, 0);
 
     try state.loadRelativeFile(
-        direct_allocator,
+        page_allocator,
         test_file_path,
         FromFileOptions{ .max_size = 128 },
     );
@@ -76,7 +76,7 @@ test "supports `loadRelativeFile`" {
 
 test "`init` with `pathToRelativeFile` loads file immediately" {
     var state = try U8BufferState.init(
-        direct_allocator,
+        page_allocator,
         BufferStateOptions{
             .pathToRelativeFile = test_file_path,
             .from_file_options = FromFileOptions{
@@ -109,7 +109,7 @@ test "`init` with `pathToRelativeFile` loads file immediately" {
 
 test "`handleKey` handles `w` properly" {
     var state = try U8BufferState.init(
-        direct_allocator,
+        page_allocator,
         BufferStateOptions{
             .pathToRelativeFile = test_file_path,
             .from_file_options = FromFileOptions{
