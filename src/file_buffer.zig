@@ -1,6 +1,6 @@
 const std = @import("std");
 const mem = std.mem;
-const direct_allocator = std.heap.direct_allocator;
+const page_allocator = std.heap.page_allocator;
 const testing = std.testing;
 const String = @import("./string.zig").String;
 const assert = std.debug.assert;
@@ -107,7 +107,7 @@ pub fn FileBuffer(comptime T: type, comptime tFromU8: TFromU8Function(T)) type {
 
             var cwd = std.fs.cwd();
             var file_bytes = try cwd.readFileAlloc(allocator, filename, from_file_options.max_size);
-            var newline_iterator = mem.separate(file_bytes, newline_delimiter);
+            var newline_iterator = mem.split(file_bytes, newline_delimiter);
             var buffer = try Self.init(allocator, file_buffer_options);
             while (newline_iterator.next()) |l| {
                 const s = try tFromU8(allocator, l);
@@ -234,18 +234,17 @@ pub fn FileBuffer(comptime T: type, comptime tFromU8: TFromU8Function(T)) type {
             const count = self.count - count_difference;
 
             var allocated_lines = self.__lines;
-            if (options.shrink) {
-                allocated_lines = self.allocator.shrink(self.__lines, count);
-                self.capacity = allocated_lines.len;
-            }
             for (self.__lines[start..end]) |*removed_line| {
                 if (hasDeinit) removed_line.deinit() else self.allocator.free(removed_line.*);
             }
 
             mem.copy(T, allocated_lines[0..start], lines_before_deletion);
             mem.copy(T, allocated_lines[start..count], lines_after_deletion);
+            if (options.shrink) {
+                allocated_lines = self.allocator.shrink(self.__lines, count);
+                self.capacity = allocated_lines.len;
+            }
             self.count = count;
-            self.capacity = allocated_lines.len;
         }
 
         pub fn removeCopy(
@@ -285,7 +284,7 @@ pub fn FileBuffer(comptime T: type, comptime tFromU8: TFromU8Function(T)) type {
     };
 }
 fn getPlatformNewlineDelimiter() []const u8 {
-    return switch (std.builtin.os) {
+    return switch (std.builtin.os.tag) {
         .windows => "\r\n",
         // @TODO: establish if `else` here is actually representative of reality.
         else => "\n",
