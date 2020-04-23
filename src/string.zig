@@ -433,6 +433,8 @@ test "`insertSliceCopy` inserts a string into a copy of a `String`" {
     testing.expectEqualSlices(u8, string2.sliceConst(), "hellolo!");
     const string3 = try string2.insertSliceCopy(page_allocator, 5, ", bo");
     testing.expectEqualSlices(u8, string3.sliceConst(), "hello, bolo!");
+
+    // original string remains the same
     testing.expectEqualSlices(u8, string.sliceConst(), "hello!");
 }
 
@@ -490,6 +492,10 @@ test "`deleteCopy` deletes" {
     const string3 = try string2.deleteCopy(page_allocator, 2, 8);
     testing.expectEqualSlices(u8, string3.sliceConst(), "ho!");
     testing.expectEqual(string3.capacity, 3);
+
+    // original string remains the same
+    testing.expectEqualSlices(u8, string.sliceConst(), "hello, bolo!");
+    testing.expectEqual(string.capacity, 12);
 }
 
 test "`fromFormat` returns a correct `String`" {
