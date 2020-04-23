@@ -433,6 +433,7 @@ test "`insertSliceCopy` inserts a string into a copy of a `String`" {
     testing.expectEqualSlices(u8, string2.sliceConst(), "hellolo!");
     const string3 = try string2.insertSliceCopy(page_allocator, 5, ", bo");
     testing.expectEqualSlices(u8, string3.sliceConst(), "hello, bolo!");
+    testing.expectEqualSlices(u8, string.sliceConst(), "hello!");
 }
 
 test "`delete` deletes" {
@@ -440,6 +441,16 @@ test "`delete` deletes" {
     string.delete(1, 4, DeleteOptions{});
     testing.expectEqualSlices(u8, string.sliceConst(), "ho!");
     testing.expectEqual(string.capacity, 6);
+
+    var string2 = try String(u8).copyConst(page_allocator, "hello, there!");
+    string2.delete(0, 3, DeleteOptions{});
+    testing.expectEqualSlices(u8, string2.sliceConst(), "lo, there!");
+    testing.expectEqual(string2.capacity, 13);
+
+    var string3 = try String(u8).copyConst(page_allocator, "hello, there!");
+    string3.delete(4, 5, DeleteOptions{});
+    testing.expectEqualSlices(u8, string3.sliceConst(), "hell, there!");
+    testing.expectEqual(string3.capacity, 13);
 }
 
 test "`delete` deletes and shrinks if given the option" {
@@ -447,6 +458,16 @@ test "`delete` deletes and shrinks if given the option" {
     string.delete(1, 4, DeleteOptions{ .shrink = true });
     testing.expectEqualSlices(u8, string.sliceConst(), "ho!");
     testing.expectEqual(string.capacity, 3);
+
+    var string2 = try String(u8).copyConst(page_allocator, "hello, there!");
+    string2.delete(0, 3, DeleteOptions{ .shrink = true });
+    testing.expectEqualSlices(u8, string2.sliceConst(), "lo, there!");
+    testing.expectEqual(string2.capacity, 10);
+
+    var string3 = try String(u8).copyConst(page_allocator, "hello, there!");
+    string3.delete(4, 5, DeleteOptions{ .shrink = true });
+    testing.expectEqualSlices(u8, string3.sliceConst(), "hell, there!");
+    testing.expectEqual(string3.capacity, 12);
 }
 
 test "`format` returns a custom format instead of everything" {
