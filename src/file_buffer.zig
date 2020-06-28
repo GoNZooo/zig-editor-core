@@ -170,14 +170,14 @@ pub fn FileBuffer(comptime T: type, comptime tFromU8: TFromU8Function(T)) type {
 
         pub fn insert(self: *Self, start: usize, lines_to_insert: ConstLines) !void {
             const capacity = self.getRequiredCapacity(lines_to_insert);
-            const lines_before_start = self.__lines[0..start];
-            const start_of_slice_after = start + lines_to_insert.len;
-            const end_of_slice_after = self.count + lines_to_insert.len;
-            const lines_after_inserted = self.__lines[start..self.count];
             var allocated_lines = self.__lines;
             if (capacity > self.capacity) {
                 allocated_lines = try self.allocator.realloc(self.__lines, capacity);
             }
+            const lines_before_start = allocated_lines[0..start];
+            const start_of_slice_after = start + lines_to_insert.len;
+            const end_of_slice_after = self.count + lines_to_insert.len;
+            const lines_after_inserted = allocated_lines[start..self.count];
 
             mem.copy(T, allocated_lines[0..start], lines_before_start);
             mem.copy(

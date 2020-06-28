@@ -153,12 +153,14 @@ test "`insert` inserts lines" {
     const string3 = try String(u8).copyConst(page_allocator, "!");
     const lines_to_add = ([_]String(u8){ string1, string2, string3 })[0..];
     try buffer.append(page_allocator, lines_to_add);
+
     const string4 = try String(u8).copyConst(page_allocator, "there,");
     const string5 = try String(u8).copyConst(page_allocator, "you");
     const string6 = try String(u8).copyConst(page_allocator, "handsome");
     const string7 = try String(u8).copyConst(page_allocator, "devil");
     const lines_to_insert = ([_]String(u8){ string4, string5, string6, string7 })[0..];
     try buffer.insert(1, lines_to_insert);
+
     testing.expectEqual(buffer.count, 7);
     testing.expectEqual(buffer.capacity, 7);
     testing.expectEqualSlices(u8, buffer.lines()[0].sliceConst(), "hello");
@@ -168,6 +170,29 @@ test "`insert` inserts lines" {
     testing.expectEqualSlices(u8, buffer.lines()[4].sliceConst(), "devil");
     testing.expectEqualSlices(u8, buffer.lines()[5].sliceConst(), "you");
     testing.expectEqualSlices(u8, buffer.lines()[6].sliceConst(), "!");
+}
+
+test "`insert` inserts 'shaka'" {
+    var buffer = try U8FileBuffer.init(
+        page_allocator,
+        FileBufferOptions{},
+    );
+    testing.expectEqual(buffer.count, 0);
+
+    const string1 = try String(u8).copyConst(page_allocator, "boom");
+    const string3 = try String(u8).copyConst(page_allocator, "laka");
+    const lines_to_add = ([_]String(u8){ string1, string3 })[0..];
+    try buffer.append(page_allocator, lines_to_add);
+
+    const string2 = try String(u8).copyConst(page_allocator, "shaka");
+    const lines_to_insert = ([_]String(u8){string2})[0..];
+    try buffer.insert(1, lines_to_insert);
+
+    testing.expectEqual(buffer.count, 3);
+    testing.expectEqual(buffer.capacity, 3);
+    testing.expectEqualSlices(u8, buffer.lines()[0].sliceConst(), "boom");
+    testing.expectEqualSlices(u8, buffer.lines()[1].sliceConst(), "shaka");
+    testing.expectEqualSlices(u8, buffer.lines()[2].sliceConst(), "laka");
 }
 
 test "`insertCopy` inserts lines" {
