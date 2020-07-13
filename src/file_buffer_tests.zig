@@ -1,3 +1,10 @@
+const std = @import("std");
+const debug = std.debug;
+const mem = std.mem;
+const fmt = std.fmt;
+const testing = std.testing;
+const heap = std.heap;
+
 const file_buffer = @import("./file_buffer.zig");
 const FileBuffer = file_buffer.FileBuffer;
 const FileBufferOptions = file_buffer.FileBufferOptions;
@@ -6,13 +13,6 @@ const RemoveOptions = file_buffer.RemoveOptions;
 const InsertCopyOptions = file_buffer.InsertCopyOptions;
 const FromFileOptions = file_buffer.FromFileOptions;
 const String = @import("./string.zig").String;
-
-const std = @import("std");
-const mem = std.mem;
-const testing = std.testing;
-const debug = std.debug;
-const heap = std.heap;
-
 const U8FileBuffer = FileBuffer(String(u8), String(u8).copyConst);
 
 test "`deinit` frees the memory in the `FileBuffer`" {
