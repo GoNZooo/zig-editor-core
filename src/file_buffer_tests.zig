@@ -27,6 +27,7 @@ test "`deinit` frees the memory in the `FileBuffer`" {
     const string2 = try String(u8).copyConst(&testing_allocator.allocator, "there");
     const lines_to_add = ([_]String(u8){ string1, string2 })[0..];
     try buffer.append(&testing_allocator.allocator, lines_to_add);
+
     testing.expectEqual(buffer.count, 2);
     testing.expectEqual(buffer.capacity, 2);
     buffer.deinit();
