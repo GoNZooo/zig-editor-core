@@ -16,21 +16,23 @@ const heap = std.heap;
 const U8FileBuffer = FileBuffer(String(u8), String(u8).copyConst);
 
 test "`deinit` frees the memory in the `FileBuffer`" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     var buffer = try U8FileBuffer.init(
-        heap.page_allocator,
+        &testing_allocator.allocator,
         FileBufferOptions{},
     );
     testing.expectEqual(buffer.count, 0);
 
-    const string1 = try String(u8).copyConst(heap.page_allocator, "hello");
-    const string2 = try String(u8).copyConst(heap.page_allocator, "there");
+    const string1 = try String(u8).copyConst(&testing_allocator.allocator, "hello");
+    const string2 = try String(u8).copyConst(&testing_allocator.allocator, "there");
     const lines_to_add = ([_]String(u8){ string1, string2 })[0..];
-    try buffer.append(heap.page_allocator, lines_to_add);
+    try buffer.append(&testing_allocator.allocator, lines_to_add);
     const buffer_lines = buffer.lines();
     const buffer_line_1_content = buffer_lines[0].__chars;
     testing.expectEqual(buffer.count, 2);
     testing.expectEqual(buffer.capacity, 2);
     buffer.deinit();
+    try testing_allocator.validate();
 }
 
 fn u8ToU8(allocator: *mem.Allocator, string: []const u8) ![]u8 {
