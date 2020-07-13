@@ -26,10 +26,11 @@ fn characterToKey(character: u8) Key {
 }
 
 test "`dd` creates a delete command" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "dd";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const command = command_slice[0];
@@ -46,6 +47,8 @@ test "`dd` creates a delete command" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`dddd` = two delete commands" {
@@ -73,10 +76,11 @@ test "`dddd` = two delete commands" {
 }
 
 test "`ddde` = two delete commands, last one until end of word" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "ddde";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 2);
     const first_command = command_slice[0];
@@ -107,13 +111,16 @@ test "`ddde` = two delete commands, last one until end of word" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`dw` = 'delete until next word'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "dw";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -130,13 +137,16 @@ test "`dw` = 'delete until next word'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`w` = 'move forward one word'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "w";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -153,13 +163,16 @@ test "`w` = 'move forward one word'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`b` = 'move back one word'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -176,13 +189,16 @@ test "`b` = 'move back one word'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`51w` = 'move forward 51 words'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "51w";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -199,13 +215,16 @@ test "`51w` = 'move forward 51 words'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`51b` = 'move back 51 words'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "51b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -222,13 +241,16 @@ test "`51b` = 'move back 51 words'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`dj` = 'delete one line downwards'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "dj";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -245,13 +267,16 @@ test "`dj` = 'delete one line downwards'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`dk` = 'delete one line upwards'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "dk";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -268,13 +293,16 @@ test "`dk` = 'delete one line upwards'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`5dj` = 'delete 5 lines downwards'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "5dj";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -291,13 +319,16 @@ test "`5dj` = 'delete 5 lines downwards'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`5dk` = 'delete 5 lines upwards'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "5dk";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -314,13 +345,16 @@ test "`5dk` = 'delete 5 lines upwards'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`5dd` = 'delete 4 lines downwards'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "5dd";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -337,13 +371,16 @@ test "`5dd` = 'delete 4 lines downwards'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`52dd` = 'delete 51 lines downwards'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "52dd";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -360,13 +397,16 @@ test "`52dd` = 'delete 51 lines downwards'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`52dj` = 'delete 52 lines downwards'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "52dj";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -383,13 +423,16 @@ test "`52dj` = 'delete 52 lines downwards'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`5232dj` = 'delete 5232 lines downwards'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "5232dj";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -406,13 +449,16 @@ test "`5232dj` = 'delete 5232 lines downwards'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`5232dj2301dk` = 'delete 5232 lines downwards' & 'delete 2301 lines upwards'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "5232dj2301dk";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 2);
     const first_command = command_slice[0];
@@ -443,13 +489,16 @@ test "`5232dj2301dk` = 'delete 5232 lines downwards' & 'delete 2301 lines upward
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`5232yy` = 'yank 5231 lines downwards'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "5232yy";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -466,13 +515,16 @@ test "`5232yy` = 'yank 5231 lines downwards'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`522yj201yk` = 'yank 522 lines downwards' & 'yank 231 lines upwards'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "522yj201yk";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 2);
     const first_command = command_slice[0];
@@ -503,13 +555,16 @@ test "`522yj201yk` = 'yank 522 lines downwards' & 'yank 231 lines upwards'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`df)` = 'delete to and including )'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "df)";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -526,13 +581,16 @@ test "`df)` = 'delete to and including )'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`dF)` = 'delete back to and including )'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "dF)";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -549,13 +607,16 @@ test "`dF)` = 'delete back to and including )'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`dt)` = 'delete to but excluding )'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "dt)";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -572,13 +633,16 @@ test "`dt)` = 'delete to but excluding )'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`dT)` = 'delete back to but excluding )'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "dT)";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -595,13 +659,16 @@ test "`dT)` = 'delete back to but excluding )'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`\"add` = 'delete current line into register a'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "\"add";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -619,13 +686,16 @@ test "`\"add` = 'delete current line into register a'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`\"+5dj` = 'delete 5 lines down into register +'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "\"+5dj";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -643,13 +713,16 @@ test "`\"+5dj` = 'delete 5 lines down into register +'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`p` = 'paste forwards'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "p";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -661,13 +734,16 @@ test "`p` = 'paste forwards'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`\"a3P` = 'paste backwards 3 times from register a'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "\"a3P";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -679,13 +755,16 @@ test "`\"a3P` = 'paste backwards 3 times from register a'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`d$` = 'delete until end of line'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "d$";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -703,13 +782,16 @@ test "`d$` = 'delete until end of line'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`d^` = 'delete until beginning of line'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "d^";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -727,13 +809,16 @@ test "`d^` = 'delete until beginning of line'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`cc` = 'change current line'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "cc";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -751,13 +836,16 @@ test "`cc` = 'change current line'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`cfe` = 'change until e forwards'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "cfe";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -775,13 +863,16 @@ test "`cfe` = 'change until e forwards'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`\"*cT$` = 'change backwards until but excluding the character $ into register *'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "\"*cT$";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -799,13 +890,16 @@ test "`\"*cT$` = 'change backwards until but excluding the character $ into regi
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`15c$` = 'change to end of line downwards 14 lines'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "15c$";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -823,13 +917,16 @@ test "`15c$` = 'change to end of line downwards 14 lines'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`15j` = 'move down 15 lines'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "15j";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -847,13 +944,16 @@ test "`15j` = 'move down 15 lines'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`14$` = 'move to the end of the line, 14 lines down'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "14$";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -871,13 +971,16 @@ test "`14$` = 'move to the end of the line, 14 lines down'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`3f\"` = 'move to the third ocurrence forwards of \"'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "3f\"";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -895,13 +998,16 @@ test "`3f\"` = 'move to the third ocurrence forwards of \"'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`150F(` = 'move unto the 150th ocurrence backwards of ('" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "150F(";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -919,13 +1025,16 @@ test "`150F(` = 'move unto the 150th ocurrence backwards of ('" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`2T(` = 'move to the 2nd ocurrence backwards of ('" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "2T(";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -943,13 +1052,16 @@ test "`2T(` = 'move to the 2nd ocurrence backwards of ('" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`15t)` = 'move to the 15th ocurrence forwards of )'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "15t)";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -967,13 +1079,16 @@ test "`15t)` = 'move to the 15th ocurrence forwards of )'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`\"u2d}` = 'delete 2 paragraphs forwards into register u'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "\"u2d}";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -991,13 +1106,16 @@ test "`\"u2d}` = 'delete 2 paragraphs forwards into register u'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`\"o15y{` = 'yank 15 paragraphs backwards into register o'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "\"o15y{";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1015,13 +1133,16 @@ test "`\"o15y{` = 'yank 15 paragraphs backwards into register o'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`}2{` = 'go forward one paragraph, go back two paragraphs'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "}2{";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 2);
     const first_command = command_slice[0];
@@ -1053,13 +1174,16 @@ test "`}2{` = 'go forward one paragraph, go back two paragraphs'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`\"ay0\"a3p` = 'yank until column zero into register a, paste from register a 3 times'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "\"ay0\"a3p";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 2);
     const first_command = command_slice[0];
@@ -1079,13 +1203,16 @@ test "`\"ay0\"a3p` = 'yank until column zero into register a, paste from registe
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`maj'a` = 'set mark a, move one line down, move to mark a's line'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "maj'a";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 3);
     const first_command = command_slice[0];
@@ -1121,13 +1248,16 @@ test "`maj'a` = 'set mark a, move one line down, move to mark a's line'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`maj`a` = 'set mark a, move one line down, move to mark a's position'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "maj`a";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 3);
     const first_command = command_slice[0];
@@ -1163,13 +1293,16 @@ test "`maj`a` = 'set mark a, move one line down, move to mark a's position'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`d`a` = 'delete until mark a's position'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "d`a";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1186,13 +1319,16 @@ test "`d`a` = 'delete until mark a's position'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`d'a` = 'delete until mark a's line'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "d'a";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1209,13 +1345,16 @@ test "`d'a` = 'delete until mark a's line'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`9l22h` = 'go forward 9 characters, go back 22 characters'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "9l22h";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 2);
     const first_command = command_slice[0];
@@ -1247,13 +1386,16 @@ test "`9l22h` = 'go forward 9 characters, go back 22 characters'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`\"aci\"` = 'change inside double quotes and save old content to register a'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "\"aci\"";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1271,13 +1413,16 @@ test "`\"aci\"` = 'change inside double quotes and save old content to register 
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`\"adi\"15k\"a2p` = 'delete inside double quotes into register a, move up, paste from it'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "\"adi\"15k\"a2p";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 3);
     const first_command = command_slice[0];
@@ -1318,13 +1463,16 @@ test "`\"adi\"15k\"a2p` = 'delete inside double quotes into register a, move up,
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`cs\"` = 'change surrounding double quotes" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "cs\"";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1342,13 +1490,16 @@ test "`cs\"` = 'change surrounding double quotes" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`ds\"` = 'delete surrounding double quotes" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "ds\"";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1366,13 +1517,16 @@ test "`ds\"` = 'delete surrounding double quotes" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`dG` = 'delete until end of file'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "dG";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1390,13 +1544,16 @@ test "`dG` = 'delete until end of file'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`G` = 'go to end of file'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "G";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1414,13 +1571,16 @@ test "`G` = 'go to end of file'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`15G` = 'go to end of file'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "15G";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1438,13 +1598,16 @@ test "`15G` = 'go to end of file'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`\"ad15G` = 'delete until line 15 of file into register a'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "\"ad15G";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1462,13 +1625,16 @@ test "`\"ad15G` = 'delete until line 15 of file into register a'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`d15G` = 'delete until line 15 of file'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "d15G";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1486,13 +1652,16 @@ test "`d15G` = 'delete until line 15 of file'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`dgg` = 'delete until beginning of file'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "dgg";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1510,13 +1679,16 @@ test "`dgg` = 'delete until beginning of file'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`gg` = 'go to beginning of file'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "gg";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1534,13 +1706,16 @@ test "`gg` = 'go to beginning of file'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`15gg` = 'go to line 15 of file'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "15gg";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1558,13 +1733,16 @@ test "`15gg` = 'go to line 15 of file'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`\"ad15gg` = 'delete until line 15 of file into register a'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "\"ad15gg";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1582,13 +1760,16 @@ test "`\"ad15gg` = 'delete until line 15 of file into register a'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`d15gg` = 'delete until line 15 of file'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "d15gg";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1606,13 +1787,16 @@ test "`d15gg` = 'delete until line 15 of file'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`gc20j` = 'comment downwards 20 lines'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "gc20j";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1629,13 +1813,16 @@ test "`gc20j` = 'comment downwards 20 lines'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`20gcj` = 'comment downwards 20 lines'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "20gcj";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1652,13 +1839,16 @@ test "`20gcj` = 'comment downwards 20 lines'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`gc%` = 'comment until matching token'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "gc%";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1669,13 +1859,16 @@ test "`gc%` = 'comment until matching token'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`J` = 'bring line up'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "J";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1686,13 +1879,16 @@ test "`J` = 'bring line up'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`25J` = 'bring line up'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "25J";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1703,17 +1899,22 @@ test "`25J` = 'bring line up'" {
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`u` = 'undo'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "u";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Undo);
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`C-r` = 'redo'" {
@@ -1759,10 +1960,11 @@ test "`iC-[` = 'enter insert mode, then exit it'" {
 }
 
 test "`igaf%C-[` = 'enter insert mode, then exit it'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "igaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 6);
     const first_command = command_slice[0];
@@ -1785,13 +1987,16 @@ test "`igaf%C-[` = 'enter insert mode, then exit it'" {
     }
     const last_command = command_slice[5];
     testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`sgaf%C-[` = 'replace current character, then exit insert mode'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "sgaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 6);
     const first_command = command_slice[0];
@@ -1815,13 +2020,16 @@ test "`sgaf%C-[` = 'replace current character, then exit insert mode'" {
     }
     const last_command = command_slice[5];
     testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`3sgaf%C-[` = 'replace three characters, then exit insert mode'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "3sgaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 6);
     const first_command = command_slice[0];
@@ -1846,13 +2054,16 @@ test "`3sgaf%C-[` = 'replace three characters, then exit insert mode'" {
     }
     const last_command = command_slice[5];
     testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`\"a3sgaf%C-[` = 'replace three characters, then exit insert mode'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "\"a3sgaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 6);
     const first_command = command_slice[0];
@@ -1877,13 +2088,16 @@ test "`\"a3sgaf%C-[` = 'replace three characters, then exit insert mode'" {
     }
     const last_command = command_slice[5];
     testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`ogaf%C-[` = 'insert on new line downwards, then exit insert mode'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "ogaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 6);
     const first_command = command_slice[0];
@@ -1906,13 +2120,16 @@ test "`ogaf%C-[` = 'insert on new line downwards, then exit insert mode'" {
     }
     const last_command = command_slice[5];
     testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`265ogaf%C-[` = 'insert on new line downwards, then exit insert mode'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "265ogaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 6);
     const first_command = command_slice[0];
@@ -1936,13 +2153,16 @@ test "`265ogaf%C-[` = 'insert on new line downwards, then exit insert mode'" {
     }
     const last_command = command_slice[5];
     testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`Ogaf%C-[` = 'insert on new line upwards, then exit insert mode'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "Ogaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 6);
     const first_command = command_slice[0];
@@ -1965,13 +2185,16 @@ test "`Ogaf%C-[` = 'insert on new line upwards, then exit insert mode'" {
     }
     const last_command = command_slice[5];
     testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`15Ogaf%C-[` = 'insert on new line upwards, then exit insert mode'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "15Ogaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 6);
     const first_command = command_slice[0];
@@ -1995,46 +2218,58 @@ test "`15Ogaf%C-[` = 'insert on new line upwards, then exit insert mode'" {
     }
     const last_command = command_slice[5];
     testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`zt` = 'scroll view so that cursor is at top'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "zt";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.ScrollTop);
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`zz` = 'scroll view so that cursor is at center'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "zz";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.ScrollCenter);
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`zb` = 'scroll view so that cursor is at bottom'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "zb";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.ScrollBottom);
+    commands.deinit();
+    try testing_allocator.validate();
 }
 
 test "`qawibC-[q` = 'record macro into 'a'; insert 'b', escape'" {
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "qawib\x1bq";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(&testing_allocator.allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 6);
 
@@ -2109,7 +2344,10 @@ test "`qawibC-[q` = 'record macro into 'a'; insert 'b', escape'" {
             }
 
             testing.expect(std.meta.activeTag(end_macro_data.commands[3]) == Command.ExitInsertMode);
+            testing_allocator.allocator.free(end_macro_data.commands);
         },
         else => unreachable,
     }
+    commands.deinit();
+    try testing_allocator.validate();
 }
