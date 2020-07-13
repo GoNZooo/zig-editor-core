@@ -1,6 +1,9 @@
 const std = @import("std");
-const page_allocator = std.heap.page_allocator;
+const debug = std.debug;
+const mem = std.mem;
+const fmt = std.fmt;
 const testing = std.testing;
+const heap = std.heap;
 
 const vim = @import("./vim.zig");
 const Key = vim.Key;
@@ -26,7 +29,7 @@ test "`dd` creates a delete command" {
     const input = "dd";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const command = command_slice[0];
@@ -49,7 +52,7 @@ test "`dddd` = two delete commands" {
     const input = "dddd";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 2);
     for (command_slice) |command| {
@@ -73,7 +76,7 @@ test "`ddde` = two delete commands, last one until end of word" {
     const input = "ddde";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 2);
     const first_command = command_slice[0];
@@ -110,7 +113,7 @@ test "`dw` = 'delete until next word'" {
     const input = "dw";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -133,7 +136,7 @@ test "`w` = 'move forward one word'" {
     const input = "w";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -156,7 +159,7 @@ test "`b` = 'move back one word'" {
     const input = "b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -179,7 +182,7 @@ test "`51w` = 'move forward 51 words'" {
     const input = "51w";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -202,7 +205,7 @@ test "`51b` = 'move back 51 words'" {
     const input = "51b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -225,7 +228,7 @@ test "`dj` = 'delete one line downwards'" {
     const input = "dj";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -248,7 +251,7 @@ test "`dk` = 'delete one line upwards'" {
     const input = "dk";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -271,7 +274,7 @@ test "`5dj` = 'delete 5 lines downwards'" {
     const input = "5dj";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -294,7 +297,7 @@ test "`5dk` = 'delete 5 lines upwards'" {
     const input = "5dk";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -317,7 +320,7 @@ test "`5dd` = 'delete 4 lines downwards'" {
     const input = "5dd";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -340,7 +343,7 @@ test "`52dd` = 'delete 51 lines downwards'" {
     const input = "52dd";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -363,7 +366,7 @@ test "`52dj` = 'delete 52 lines downwards'" {
     const input = "52dj";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -386,7 +389,7 @@ test "`5232dj` = 'delete 5232 lines downwards'" {
     const input = "5232dj";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -409,7 +412,7 @@ test "`5232dj2301dk` = 'delete 5232 lines downwards' & 'delete 2301 lines upward
     const input = "5232dj2301dk";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 2);
     const first_command = command_slice[0];
@@ -446,7 +449,7 @@ test "`5232yy` = 'yank 5231 lines downwards'" {
     const input = "5232yy";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -469,7 +472,7 @@ test "`522yj201yk` = 'yank 522 lines downwards' & 'yank 231 lines upwards'" {
     const input = "522yj201yk";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 2);
     const first_command = command_slice[0];
@@ -506,7 +509,7 @@ test "`df)` = 'delete to and including )'" {
     const input = "df)";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -529,7 +532,7 @@ test "`dF)` = 'delete back to and including )'" {
     const input = "dF)";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -552,7 +555,7 @@ test "`dt)` = 'delete to but excluding )'" {
     const input = "dt)";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -575,7 +578,7 @@ test "`dT)` = 'delete back to but excluding )'" {
     const input = "dT)";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -598,7 +601,7 @@ test "`\"add` = 'delete current line into register a'" {
     const input = "\"add";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -622,7 +625,7 @@ test "`\"+5dj` = 'delete 5 lines down into register +'" {
     const input = "\"+5dj";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -646,7 +649,7 @@ test "`p` = 'paste forwards'" {
     const input = "p";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -664,7 +667,7 @@ test "`\"a3P` = 'paste backwards 3 times from register a'" {
     const input = "\"a3P";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -682,7 +685,7 @@ test "`d$` = 'delete until end of line'" {
     const input = "d$";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -706,7 +709,7 @@ test "`d^` = 'delete until beginning of line'" {
     const input = "d^";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -730,7 +733,7 @@ test "`cc` = 'change current line'" {
     const input = "cc";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -754,7 +757,7 @@ test "`cfe` = 'change until e forwards'" {
     const input = "cfe";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -778,7 +781,7 @@ test "`\"*cT$` = 'change backwards until but excluding the character $ into regi
     const input = "\"*cT$";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -802,7 +805,7 @@ test "`15c$` = 'change to end of line downwards 14 lines'" {
     const input = "15c$";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -826,7 +829,7 @@ test "`15j` = 'move down 15 lines'" {
     const input = "15j";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -850,7 +853,7 @@ test "`14$` = 'move to the end of the line, 14 lines down'" {
     const input = "14$";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -874,7 +877,7 @@ test "`3f\"` = 'move to the third ocurrence forwards of \"'" {
     const input = "3f\"";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -898,7 +901,7 @@ test "`150F(` = 'move unto the 150th ocurrence backwards of ('" {
     const input = "150F(";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -922,7 +925,7 @@ test "`2T(` = 'move to the 2nd ocurrence backwards of ('" {
     const input = "2T(";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -946,7 +949,7 @@ test "`15t)` = 'move to the 15th ocurrence forwards of )'" {
     const input = "15t)";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -970,7 +973,7 @@ test "`\"u2d}` = 'delete 2 paragraphs forwards into register u'" {
     const input = "\"u2d}";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -994,7 +997,7 @@ test "`\"o15y{` = 'yank 15 paragraphs backwards into register o'" {
     const input = "\"o15y{";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1018,7 +1021,7 @@ test "`}2{` = 'go forward one paragraph, go back two paragraphs'" {
     const input = "}2{";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 2);
     const first_command = command_slice[0];
@@ -1056,7 +1059,7 @@ test "`\"ay0\"a3p` = 'yank until column zero into register a, paste from registe
     const input = "\"ay0\"a3p";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 2);
     const first_command = command_slice[0];
@@ -1082,7 +1085,7 @@ test "`maj'a` = 'set mark a, move one line down, move to mark a's line'" {
     const input = "maj'a";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 3);
     const first_command = command_slice[0];
@@ -1124,7 +1127,7 @@ test "`maj`a` = 'set mark a, move one line down, move to mark a's position'" {
     const input = "maj`a";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 3);
     const first_command = command_slice[0];
@@ -1166,7 +1169,7 @@ test "`d`a` = 'delete until mark a's position'" {
     const input = "d`a";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1189,7 +1192,7 @@ test "`d'a` = 'delete until mark a's line'" {
     const input = "d'a";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1212,7 +1215,7 @@ test "`9l22h` = 'go forward 9 characters, go back 22 characters'" {
     const input = "9l22h";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 2);
     const first_command = command_slice[0];
@@ -1250,7 +1253,7 @@ test "`\"aci\"` = 'change inside double quotes and save old content to register 
     const input = "\"aci\"";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1274,7 +1277,7 @@ test "`\"adi\"15k\"a2p` = 'delete inside double quotes into register a, move up,
     const input = "\"adi\"15k\"a2p";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 3);
     const first_command = command_slice[0];
@@ -1321,7 +1324,7 @@ test "`cs\"` = 'change surrounding double quotes" {
     const input = "cs\"";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1345,7 +1348,7 @@ test "`ds\"` = 'delete surrounding double quotes" {
     const input = "ds\"";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1369,7 +1372,7 @@ test "`dG` = 'delete until end of file'" {
     const input = "dG";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1393,7 +1396,7 @@ test "`G` = 'go to end of file'" {
     const input = "G";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1417,7 +1420,7 @@ test "`15G` = 'go to end of file'" {
     const input = "15G";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1441,7 +1444,7 @@ test "`\"ad15G` = 'delete until line 15 of file into register a'" {
     const input = "\"ad15G";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1465,7 +1468,7 @@ test "`d15G` = 'delete until line 15 of file'" {
     const input = "d15G";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1489,7 +1492,7 @@ test "`dgg` = 'delete until beginning of file'" {
     const input = "dgg";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1513,7 +1516,7 @@ test "`gg` = 'go to beginning of file'" {
     const input = "gg";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1537,7 +1540,7 @@ test "`15gg` = 'go to line 15 of file'" {
     const input = "15gg";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1561,7 +1564,7 @@ test "`\"ad15gg` = 'delete until line 15 of file into register a'" {
     const input = "\"ad15gg";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1585,7 +1588,7 @@ test "`d15gg` = 'delete until line 15 of file'" {
     const input = "d15gg";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1609,7 +1612,7 @@ test "`gc20j` = 'comment downwards 20 lines'" {
     const input = "gc20j";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1632,7 +1635,7 @@ test "`20gcj` = 'comment downwards 20 lines'" {
     const input = "20gcj";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1655,7 +1658,7 @@ test "`gc%` = 'comment until matching token'" {
     const input = "gc%";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1672,7 +1675,7 @@ test "`J` = 'bring line up'" {
     const input = "J";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1689,7 +1692,7 @@ test "`25J` = 'bring line up'" {
     const input = "25J";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1706,7 +1709,7 @@ test "`u` = 'undo'" {
     const input = "u";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -1716,7 +1719,7 @@ test "`u` = 'undo'" {
 test "`C-r` = 'redo'" {
     const input = Key{ .key_code = 'r', .left_control = true };
     var state = State.start();
-    const command = try vim.handleKey(page_allocator, input, &state);
+    const command = try vim.handleKey(heap.page_allocator, input, &state);
     if (command) |c| {
         testing.expect(std.meta.activeTag(c) == Command.Redo);
     } else {
@@ -1727,7 +1730,7 @@ test "`C-r` = 'redo'" {
 test "`i` = 'enter insert mode' & state is modified to be in insert mode after" {
     const input = Key{ .key_code = 'i' };
     var state = State.start();
-    const maybeCommand = try vim.handleKey(page_allocator, input, &state);
+    const maybeCommand = try vim.handleKey(heap.page_allocator, input, &state);
     if (maybeCommand) |command| {
         testing.expect(std.meta.activeTag(state) == State.InInsertMode);
         testing.expect(std.meta.activeTag(command) == Command.EnterInsertMode);
@@ -1739,14 +1742,14 @@ test "`i` = 'enter insert mode' & state is modified to be in insert mode after" 
 test "`iC-[` = 'enter insert mode, then exit it'" {
     const input = Key{ .key_code = 'i' };
     var state = State.start();
-    const maybeCommand1 = try vim.handleKey(page_allocator, input, &state);
+    const maybeCommand1 = try vim.handleKey(heap.page_allocator, input, &state);
     if (maybeCommand1) |command| {
         testing.expect(std.meta.activeTag(state) == State.InInsertMode);
         testing.expect(std.meta.activeTag(command) == Command.EnterInsertMode);
     } else {
         std.debug.panic("No command when expecting one.", .{});
     }
-    const maybeCommand2 = try vim.handleKey(page_allocator, vim.ESCAPE_KEY, &state);
+    const maybeCommand2 = try vim.handleKey(heap.page_allocator, vim.ESCAPE_KEY, &state);
     if (maybeCommand2) |command| {
         testing.expect(std.meta.activeTag(state) == State.Start);
         testing.expect(std.meta.activeTag(command) == Command.ExitInsertMode);
@@ -1759,7 +1762,7 @@ test "`igaf%C-[` = 'enter insert mode, then exit it'" {
     const input = "igaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 6);
     const first_command = command_slice[0];
@@ -1788,7 +1791,7 @@ test "`sgaf%C-[` = 'replace current character, then exit insert mode'" {
     const input = "sgaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 6);
     const first_command = command_slice[0];
@@ -1818,7 +1821,7 @@ test "`3sgaf%C-[` = 'replace three characters, then exit insert mode'" {
     const input = "3sgaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 6);
     const first_command = command_slice[0];
@@ -1849,7 +1852,7 @@ test "`\"a3sgaf%C-[` = 'replace three characters, then exit insert mode'" {
     const input = "\"a3sgaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 6);
     const first_command = command_slice[0];
@@ -1880,7 +1883,7 @@ test "`ogaf%C-[` = 'insert on new line downwards, then exit insert mode'" {
     const input = "ogaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 6);
     const first_command = command_slice[0];
@@ -1909,7 +1912,7 @@ test "`265ogaf%C-[` = 'insert on new line downwards, then exit insert mode'" {
     const input = "265ogaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 6);
     const first_command = command_slice[0];
@@ -1939,7 +1942,7 @@ test "`Ogaf%C-[` = 'insert on new line upwards, then exit insert mode'" {
     const input = "Ogaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 6);
     const first_command = command_slice[0];
@@ -1968,7 +1971,7 @@ test "`15Ogaf%C-[` = 'insert on new line upwards, then exit insert mode'" {
     const input = "15Ogaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 6);
     const first_command = command_slice[0];
@@ -1998,7 +2001,7 @@ test "`zt` = 'scroll view so that cursor is at top'" {
     const input = "zt";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -2009,7 +2012,7 @@ test "`zz` = 'scroll view so that cursor is at center'" {
     const input = "zz";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -2020,7 +2023,7 @@ test "`zb` = 'scroll view so that cursor is at bottom'" {
     const input = "zb";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 1);
     const first_command = command_slice[0];
@@ -2031,7 +2034,7 @@ test "`qawibC-[q` = 'record macro into 'a'; insert 'b', escape'" {
     const input = "qawib\x1bq";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
-    const commands = try vim.handleKeys(page_allocator, &keys, &state);
+    const commands = try vim.handleKeys(heap.page_allocator, &keys, &state);
     const command_slice = commands.items;
     testing.expectEqual(command_slice.len, 6);
 
