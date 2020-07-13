@@ -42,16 +42,21 @@ fn u8ToU8(allocator: *mem.Allocator, string: []const u8) ![]u8 {
 }
 
 test "`deinit` frees the memory in the `FileBuffer` without `deinit()` present" {
-    var buffer = try FileBuffer([]u8, u8ToU8).init(heap.page_allocator, FileBufferOptions{});
-    var string1 = try mem.dupe(heap.page_allocator, u8, "hello"[0..]);
-    var string2 = try mem.dupe(heap.page_allocator, u8, "there"[0..]);
-    var string3 = try mem.dupe(heap.page_allocator, u8, "handsome"[0..]);
+    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var buffer = try FileBuffer([]u8, u8ToU8).init(&testing_allocator.allocator, FileBufferOptions{});
+    var string1 = try mem.dupe(&testing_allocator.allocator, u8, "hello"[0..]);
+    var string2 = try mem.dupe(&testing_allocator.allocator, u8, "there"[0..]);
+    var string3 = try mem.dupe(&testing_allocator.allocator, u8, "handsome"[0..]);
     const lines_to_add = ([_][]u8{ string1, string2, string3 })[0..];
-    try buffer.append(heap.page_allocator, lines_to_add);
+    try buffer.append(&testing_allocator.allocator, lines_to_add);
     const buffer_lines = buffer.lines();
     testing.expectEqual(buffer.count, 3);
     testing.expectEqual(buffer.capacity, 3);
     buffer.deinit();
+    testing_allocator.allocator.free(string1);
+    testing_allocator.allocator.free(string2);
+    testing_allocator.allocator.free(string3);
+    try testing_allocator.validate();
 }
 
 test "`append` appends lines" {
