@@ -27,12 +27,12 @@ test "`deinit` frees the memory in the `FileBuffer`" {
     const string2 = try String(u8).copyConst(&testing_allocator.allocator, "there");
     const lines_to_add = ([_]String(u8){ string1, string2 })[0..];
     try buffer.append(&testing_allocator.allocator, lines_to_add);
-    const buffer_lines = buffer.lines();
-    const buffer_line_1_content = buffer_lines[0].__chars;
     testing.expectEqual(buffer.count, 2);
     testing.expectEqual(buffer.capacity, 2);
     buffer.deinit();
     try testing_allocator.validate();
+    testing.expectEqual(buffer.count, 0);
+    testing.expectEqual(buffer.capacity, 0);
 }
 
 fn u8ToU8(allocator: *mem.Allocator, string: []const u8) ![]u8 {
@@ -44,19 +44,18 @@ fn u8ToU8(allocator: *mem.Allocator, string: []const u8) ![]u8 {
 test "`deinit` frees the memory in the `FileBuffer` without `deinit()` present" {
     var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     var buffer = try FileBuffer([]u8, u8ToU8).init(&testing_allocator.allocator, FileBufferOptions{});
-    var string1 = try mem.dupe(&testing_allocator.allocator, u8, "hello"[0..]);
-    var string2 = try mem.dupe(&testing_allocator.allocator, u8, "there"[0..]);
-    var string3 = try mem.dupe(&testing_allocator.allocator, u8, "handsome"[0..]);
+    var string1 = try mem.dupe(heap.page_allocator, u8, "hello"[0..]);
+    var string2 = try mem.dupe(heap.page_allocator, u8, "there"[0..]);
+    var string3 = try mem.dupe(heap.page_allocator, u8, "handsome"[0..]);
     const lines_to_add = ([_][]u8{ string1, string2, string3 })[0..];
     try buffer.append(&testing_allocator.allocator, lines_to_add);
     const buffer_lines = buffer.lines();
     testing.expectEqual(buffer.count, 3);
     testing.expectEqual(buffer.capacity, 3);
     buffer.deinit();
-    testing_allocator.allocator.free(string1);
-    testing_allocator.allocator.free(string2);
-    testing_allocator.allocator.free(string3);
     try testing_allocator.validate();
+    testing.expectEqual(buffer.count, 0);
+    testing.expectEqual(buffer.capacity, 0);
 }
 
 test "`append` appends lines" {
