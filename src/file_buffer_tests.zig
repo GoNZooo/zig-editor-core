@@ -37,7 +37,7 @@ test "`deinit` frees the memory in the `FileBuffer`" {
 }
 
 fn u8ToU8(allocator: *mem.Allocator, string: []const u8) ![]u8 {
-    var copied = try mem.dupe(allocator, u8, string);
+    var copied = try allocator.dupe(u8, string);
 
     return copied;
 }
@@ -45,9 +45,9 @@ fn u8ToU8(allocator: *mem.Allocator, string: []const u8) ![]u8 {
 test "`deinit` frees the memory in the `FileBuffer` without `deinit()` present" {
     var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     var buffer = try FileBuffer([]u8, u8ToU8).init(&testing_allocator.allocator, FileBufferOptions{});
-    var string1 = try mem.dupe(heap.page_allocator, u8, "hello"[0..]);
-    var string2 = try mem.dupe(heap.page_allocator, u8, "there"[0..]);
-    var string3 = try mem.dupe(heap.page_allocator, u8, "handsome"[0..]);
+    var string1 = try heap.page_allocator.dupe(u8, "hello"[0..]);
+    var string2 = try heap.page_allocator.dupe(u8, "there"[0..]);
+    var string3 = try heap.page_allocator.dupe(u8, "handsome"[0..]);
     const lines_to_add = ([_][]u8{ string1, string2, string3 })[0..];
     try buffer.append(&testing_allocator.allocator, lines_to_add);
     const buffer_lines = buffer.lines();
@@ -328,9 +328,9 @@ test "`remove` removes and shrinks when `shrink` option is `true`" {
 
 test "`remove` removes when type does not have `deinit()`" {
     var buffer = try FileBuffer([]u8, u8ToU8).init(heap.page_allocator, FileBufferOptions{});
-    var string1 = try mem.dupe(heap.page_allocator, u8, "hello"[0..]);
-    var string2 = try mem.dupe(heap.page_allocator, u8, "there"[0..]);
-    var string3 = try mem.dupe(heap.page_allocator, u8, "handsome"[0..]);
+    var string1 = try heap.page_allocator.dupe(u8, "hello"[0..]);
+    var string2 = try heap.page_allocator.dupe(u8, "there"[0..]);
+    var string3 = try heap.page_allocator.dupe(u8, "handsome"[0..]);
     const lines_to_add = ([_][]u8{ string1, string2, string3 })[0..];
     try buffer.append(heap.page_allocator, lines_to_add);
     buffer.remove(1, 2, RemoveOptions{});

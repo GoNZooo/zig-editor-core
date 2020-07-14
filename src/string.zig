@@ -128,7 +128,7 @@ pub fn String(comptime T: type) type {
         /// string literal or other kind of const string value.
         /// The caller is responsible for calling `successful_return_value.deinit()`.
         pub fn copyConst(allocator: *mem.Allocator, slice: ConstSlice) !Self {
-            var chars = try mem.dupe(allocator, T, slice);
+            var chars = try allocator.dupe(T, slice);
 
             return Self{
                 .__chars = chars,
@@ -270,7 +270,7 @@ pub fn String(comptime T: type) type {
         /// Returns a mutable copy of the contents of the `String(T)`.
         /// caller is responsible for calling `successful_return_value.deinit()`.
         pub fn sliceCopy(self: Self, allocator: *mem.Allocator) !Slice {
-            var chars = try mem.dupe(allocator, T, self.__chars[0..self.count]);
+            var chars = try allocator.dupe(T, self.__chars[0..self.count]);
 
             return chars;
         }

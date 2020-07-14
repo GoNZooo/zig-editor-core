@@ -2,8 +2,10 @@ const std = @import("std");
 const mem = std.mem;
 const page_allocator = std.heap.page_allocator;
 const testing = std.testing;
+const debug = std.debug;
+const assert = debug.assert;
+
 const String = @import("./string.zig").String;
-const assert = std.debug.assert;
 
 pub const RemoveOptions = struct {
     shrink: bool = false,
