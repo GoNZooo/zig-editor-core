@@ -74,7 +74,7 @@ test "`append` appends lines" {
     testing.expectEqual(buffer.count, 2);
     testing.expectEqual(buffer.capacity, 2);
     for (buffer.lines()) |line, i| {
-        testing.expectEqualSlices(u8, line.sliceConst(), lines_to_add[i].sliceConst());
+        testing.expectEqualStrings(line.sliceConst(), lines_to_add[i].sliceConst());
         testing.expect(&line != &lines_to_add[i]);
     }
 }
@@ -93,7 +93,7 @@ test "`append` appends lines but doesn't increase capacity if already sufficient
     testing.expectEqual(buffer.count, 2);
     testing.expectEqual(buffer.capacity, 120);
     for (buffer.lines()) |line, i| {
-        testing.expectEqualSlices(u8, line.sliceConst(), lines_to_add[i].sliceConst());
+        testing.expectEqualStrings(line.sliceConst(), lines_to_add[i].sliceConst());
     }
 }
 
@@ -115,7 +115,7 @@ test "`appendCopy` appends lines" {
     testing.expectEqual(buffer2.count, 2);
     testing.expectEqual(buffer2.capacity, 120);
     for (buffer2.lines()) |line, i| {
-        testing.expectEqualSlices(u8, line.sliceConst(), lines_to_add[i].sliceConst());
+        testing.expectEqualStrings(line.sliceConst(), lines_to_add[i].sliceConst());
     }
     testing.expectEqual(buffer.count, 0);
     testing.expectEqual(buffer.capacity, 120);
@@ -142,7 +142,7 @@ test "`appendCopy` appends lines and shrinks if given the option" {
     testing.expectEqual(buffer2.count, 2);
     testing.expectEqual(buffer2.capacity, 2);
     for (buffer2.lines()) |line, i| {
-        testing.expectEqualSlices(u8, line.sliceConst(), lines_to_add[i].sliceConst());
+        testing.expectEqualStrings(line.sliceConst(), lines_to_add[i].sliceConst());
     }
     testing.expectEqual(buffer.count, 0);
     testing.expectEqual(buffer.capacity, 120);
@@ -170,13 +170,13 @@ test "`insert` inserts lines" {
 
     testing.expectEqual(buffer.count, 7);
     testing.expectEqual(buffer.capacity, 7);
-    testing.expectEqualSlices(u8, buffer.lines()[0].sliceConst(), "hello");
-    testing.expectEqualSlices(u8, buffer.lines()[1].sliceConst(), "there,");
-    testing.expectEqualSlices(u8, buffer.lines()[2].sliceConst(), "you");
-    testing.expectEqualSlices(u8, buffer.lines()[3].sliceConst(), "handsome");
-    testing.expectEqualSlices(u8, buffer.lines()[4].sliceConst(), "devil");
-    testing.expectEqualSlices(u8, buffer.lines()[5].sliceConst(), "you");
-    testing.expectEqualSlices(u8, buffer.lines()[6].sliceConst(), "!");
+    testing.expectEqualStrings(buffer.lines()[0].sliceConst(), "hello");
+    testing.expectEqualStrings(buffer.lines()[1].sliceConst(), "there,");
+    testing.expectEqualStrings(buffer.lines()[2].sliceConst(), "you");
+    testing.expectEqualStrings(buffer.lines()[3].sliceConst(), "handsome");
+    testing.expectEqualStrings(buffer.lines()[4].sliceConst(), "devil");
+    testing.expectEqualStrings(buffer.lines()[5].sliceConst(), "you");
+    testing.expectEqualStrings(buffer.lines()[6].sliceConst(), "!");
 }
 
 test "`insert` inserts 'shaka'" {
@@ -197,9 +197,9 @@ test "`insert` inserts 'shaka'" {
 
     testing.expectEqual(buffer.count, 3);
     testing.expectEqual(buffer.capacity, 3);
-    testing.expectEqualSlices(u8, buffer.lines()[0].sliceConst(), "boom");
-    testing.expectEqualSlices(u8, buffer.lines()[1].sliceConst(), "shaka");
-    testing.expectEqualSlices(u8, buffer.lines()[2].sliceConst(), "laka");
+    testing.expectEqualStrings(buffer.lines()[0].sliceConst(), "boom");
+    testing.expectEqualStrings(buffer.lines()[1].sliceConst(), "shaka");
+    testing.expectEqualStrings(buffer.lines()[2].sliceConst(), "laka");
 }
 
 test "`insertCopy` inserts lines" {
@@ -224,13 +224,13 @@ test "`insertCopy` inserts lines" {
     );
     testing.expectEqual(buffer2.count, 7);
     testing.expectEqual(buffer2.capacity, 7);
-    testing.expectEqualSlices(u8, buffer2.lines()[0].sliceConst(), "hello");
-    testing.expectEqualSlices(u8, buffer2.lines()[1].sliceConst(), "there,");
-    testing.expectEqualSlices(u8, buffer2.lines()[2].sliceConst(), "you");
-    testing.expectEqualSlices(u8, buffer2.lines()[3].sliceConst(), "handsome");
-    testing.expectEqualSlices(u8, buffer2.lines()[4].sliceConst(), "devil");
-    testing.expectEqualSlices(u8, buffer2.lines()[5].sliceConst(), "you");
-    testing.expectEqualSlices(u8, buffer2.lines()[6].sliceConst(), "!");
+    testing.expectEqualStrings(buffer2.lines()[0].sliceConst(), "hello");
+    testing.expectEqualStrings(buffer2.lines()[1].sliceConst(), "there,");
+    testing.expectEqualStrings(buffer2.lines()[2].sliceConst(), "you");
+    testing.expectEqualStrings(buffer2.lines()[3].sliceConst(), "handsome");
+    testing.expectEqualStrings(buffer2.lines()[4].sliceConst(), "devil");
+    testing.expectEqualStrings(buffer2.lines()[5].sliceConst(), "you");
+    testing.expectEqualStrings(buffer2.lines()[6].sliceConst(), "!");
 }
 
 test "`insertCopy` inserts lines and doesn't shrink unless told otherwise" {
@@ -258,13 +258,13 @@ test "`insertCopy` inserts lines and doesn't shrink unless told otherwise" {
     );
     testing.expectEqual(buffer2.count, 7);
     testing.expectEqual(buffer2.capacity, 80);
-    testing.expectEqualSlices(u8, buffer2.lines()[0].sliceConst(), "hello");
-    testing.expectEqualSlices(u8, buffer2.lines()[1].sliceConst(), "there,");
-    testing.expectEqualSlices(u8, buffer2.lines()[2].sliceConst(), "you");
-    testing.expectEqualSlices(u8, buffer2.lines()[3].sliceConst(), "handsome");
-    testing.expectEqualSlices(u8, buffer2.lines()[4].sliceConst(), "devil");
-    testing.expectEqualSlices(u8, buffer2.lines()[5].sliceConst(), "you");
-    testing.expectEqualSlices(u8, buffer2.lines()[6].sliceConst(), "!");
+    testing.expectEqualStrings(buffer2.lines()[0].sliceConst(), "hello");
+    testing.expectEqualStrings(buffer2.lines()[1].sliceConst(), "there,");
+    testing.expectEqualStrings(buffer2.lines()[2].sliceConst(), "you");
+    testing.expectEqualStrings(buffer2.lines()[3].sliceConst(), "handsome");
+    testing.expectEqualStrings(buffer2.lines()[4].sliceConst(), "devil");
+    testing.expectEqualStrings(buffer2.lines()[5].sliceConst(), "you");
+    testing.expectEqualStrings(buffer2.lines()[6].sliceConst(), "!");
 }
 
 test "`insertCopy` inserts lines and shrinks if told to do so" {
@@ -289,13 +289,13 @@ test "`insertCopy` inserts lines and shrinks if told to do so" {
     });
     testing.expectEqual(buffer2.count, 7);
     testing.expectEqual(buffer2.capacity, 7);
-    testing.expectEqualSlices(u8, buffer2.lines()[0].sliceConst(), "hello");
-    testing.expectEqualSlices(u8, buffer2.lines()[1].sliceConst(), "there,");
-    testing.expectEqualSlices(u8, buffer2.lines()[2].sliceConst(), "you");
-    testing.expectEqualSlices(u8, buffer2.lines()[3].sliceConst(), "handsome");
-    testing.expectEqualSlices(u8, buffer2.lines()[4].sliceConst(), "devil");
-    testing.expectEqualSlices(u8, buffer2.lines()[5].sliceConst(), "you");
-    testing.expectEqualSlices(u8, buffer2.lines()[6].sliceConst(), "!");
+    testing.expectEqualStrings(buffer2.lines()[0].sliceConst(), "hello");
+    testing.expectEqualStrings(buffer2.lines()[1].sliceConst(), "there,");
+    testing.expectEqualStrings(buffer2.lines()[2].sliceConst(), "you");
+    testing.expectEqualStrings(buffer2.lines()[3].sliceConst(), "handsome");
+    testing.expectEqualStrings(buffer2.lines()[4].sliceConst(), "devil");
+    testing.expectEqualStrings(buffer2.lines()[5].sliceConst(), "you");
+    testing.expectEqualStrings(buffer2.lines()[6].sliceConst(), "!");
 }
 
 test "`remove` removes" {
@@ -308,8 +308,8 @@ test "`remove` removes" {
     buffer.remove(1, 2, RemoveOptions{});
     testing.expectEqual(buffer.capacity, 3);
     testing.expectEqual(buffer.count, 2);
-    testing.expectEqualSlices(u8, buffer.lines()[0].sliceConst(), string1.sliceConst());
-    testing.expectEqualSlices(u8, buffer.lines()[1].sliceConst(), string3.sliceConst());
+    testing.expectEqualStrings(buffer.lines()[0].sliceConst(), string1.sliceConst());
+    testing.expectEqualStrings(buffer.lines()[1].sliceConst(), string3.sliceConst());
 }
 
 test "`remove` removes and shrinks when `shrink` option is `true`" {
@@ -322,8 +322,8 @@ test "`remove` removes and shrinks when `shrink` option is `true`" {
     buffer.remove(1, 2, RemoveOptions{ .shrink = true });
     testing.expectEqual(buffer.capacity, 2);
     testing.expectEqual(buffer.count, 2);
-    testing.expectEqualSlices(u8, buffer.lines()[0].sliceConst(), string1.sliceConst());
-    testing.expectEqualSlices(u8, buffer.lines()[1].sliceConst(), string3.sliceConst());
+    testing.expectEqualStrings(buffer.lines()[0].sliceConst(), string1.sliceConst());
+    testing.expectEqualStrings(buffer.lines()[1].sliceConst(), string3.sliceConst());
 }
 
 test "`remove` removes when type does not have `deinit()`" {
@@ -336,8 +336,8 @@ test "`remove` removes when type does not have `deinit()`" {
     buffer.remove(1, 2, RemoveOptions{});
     testing.expectEqual(buffer.capacity, 3);
     testing.expectEqual(buffer.count, 2);
-    testing.expectEqualSlices(u8, buffer.lines()[0], string1);
-    testing.expectEqualSlices(u8, buffer.lines()[1], string3);
+    testing.expectEqualStrings(buffer.lines()[0], string1);
+    testing.expectEqualStrings(buffer.lines()[1], string3);
 }
 
 test "`removeCopy` removes and gives a new `FileBuffer`" {
@@ -350,8 +350,8 @@ test "`removeCopy` removes and gives a new `FileBuffer`" {
     var buffer2 = try buffer.removeCopy(heap.page_allocator, 1, 2, RemoveOptions{});
     testing.expectEqual(buffer2.capacity, 3);
     testing.expectEqual(buffer2.count, 2);
-    testing.expectEqualSlices(u8, buffer2.lines()[0].sliceConst(), string1.sliceConst());
-    testing.expectEqualSlices(u8, buffer2.lines()[1].sliceConst(), string3.sliceConst());
+    testing.expectEqualStrings(buffer2.lines()[0].sliceConst(), string1.sliceConst());
+    testing.expectEqualStrings(buffer2.lines()[1].sliceConst(), string3.sliceConst());
 }
 
 test "`removeCopy` removes and gives a new `FileBuffer` and can shrink" {
@@ -366,8 +366,8 @@ test "`removeCopy` removes and gives a new `FileBuffer` and can shrink" {
     });
     testing.expectEqual(buffer2.capacity, 2);
     testing.expectEqual(buffer2.count, 2);
-    testing.expectEqualSlices(u8, buffer2.lines()[0].sliceConst(), string1.sliceConst());
-    testing.expectEqualSlices(u8, buffer2.lines()[1].sliceConst(), string3.sliceConst());
+    testing.expectEqualStrings(buffer2.lines()[0].sliceConst(), string1.sliceConst());
+    testing.expectEqualStrings(buffer2.lines()[1].sliceConst(), string3.sliceConst());
 }
 
 const test1_path = switch (std.builtin.os.tag) {
@@ -390,9 +390,9 @@ test "`fromRelativeFile` reads a file properly into the buffer" {
     const line4 = lines[3].sliceConst();
     const line5 = lines[4].sliceConst();
 
-    testing.expectEqualSlices(u8, line1, "hello");
-    testing.expectEqualSlices(u8, line2, "");
-    testing.expectEqualSlices(u8, line3, "there");
-    testing.expectEqualSlices(u8, line4, "you handsome");
-    testing.expectEqualSlices(u8, line5, "devil, you");
+    testing.expectEqualStrings(line1, "hello");
+    testing.expectEqualStrings(line2, "");
+    testing.expectEqualStrings(line3, "there");
+    testing.expectEqualStrings(line4, "you handsome");
+    testing.expectEqualStrings(line5, "devil, you");
 }

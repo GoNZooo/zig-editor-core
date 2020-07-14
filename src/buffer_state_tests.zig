@@ -59,19 +59,19 @@ test "supports `loadRelativeFile`" {
     const lines = state.buffer.lines();
 
     const line1 = lines[0].sliceConst();
-    testing.expectEqualSlices(u8, line1, "hello");
+    testing.expectEqualStrings(line1, "hello");
 
     const line2 = lines[1].sliceConst();
-    testing.expectEqualSlices(u8, line2, "");
+    testing.expectEqualStrings(line2, "");
 
     const line3 = lines[2].sliceConst();
-    testing.expectEqualSlices(u8, line3, "there");
+    testing.expectEqualStrings(line3, "there");
 
     const line4 = lines[3].sliceConst();
-    testing.expectEqualSlices(u8, line4, "you handsome");
+    testing.expectEqualStrings(line4, "you handsome");
 
     const line5 = lines[4].sliceConst();
-    testing.expectEqualSlices(u8, line5, "devil, you");
+    testing.expectEqualStrings(line5, "devil, you");
 }
 
 test "`init` with `pathToRelativeFile` loads file immediately" {
@@ -92,19 +92,19 @@ test "`init` with `pathToRelativeFile` loads file immediately" {
     const lines = state.buffer.lines();
 
     const line1 = lines[0].sliceConst();
-    testing.expectEqualSlices(u8, line1, "hello");
+    testing.expectEqualStrings(line1, "hello");
 
     const line2 = lines[1].sliceConst();
-    testing.expectEqualSlices(u8, line2, "");
+    testing.expectEqualStrings(line2, "");
 
     const line3 = lines[2].sliceConst();
-    testing.expectEqualSlices(u8, line3, "there");
+    testing.expectEqualStrings(line3, "there");
 
     const line4 = lines[3].sliceConst();
-    testing.expectEqualSlices(u8, line4, "you handsome");
+    testing.expectEqualStrings(line4, "you handsome");
 
     const line5 = lines[4].sliceConst();
-    testing.expectEqualSlices(u8, line5, "devil, you");
+    testing.expectEqualStrings(line5, "devil, you");
 }
 
 test "`handleKey` handles `w` properly" {

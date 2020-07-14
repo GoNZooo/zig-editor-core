@@ -394,7 +394,7 @@ test "`appendCopy` doesn't bring unused space with it" {
     const string2 = try string.appendCopy(page_allocator, added_slice);
     testing.expectEqual(string2.capacity, added_slice.len);
     testing.expectEqual(string2.count, added_slice.len);
-    testing.expectEqualSlices(u8, string2.sliceConst(), added_slice);
+    testing.expectEqualStrings(string2.sliceConst(), added_slice);
 }
 
 test "`appendCopy` doesn't disturb original string, `copyConst` copies static strings" {
@@ -407,7 +407,7 @@ test "`appendCopy` doesn't disturb original string, `copyConst` copies static st
         string2.sliceConst(),
         string3.__chars[0..string2.sliceConst().len],
     );
-    testing.expectEqualSlices(u8, string2.sliceConst(), "hello there");
+    testing.expectEqualStrings(string2.sliceConst(), "hello there");
     testing.expect(&string2.sliceConst()[0] != &string3.sliceConst()[0]);
     testing.expect(string3.capacity == 14);
     string3.deinit();
@@ -418,57 +418,57 @@ test "`appendCopy` doesn't disturb original string, `copyConst` copies static st
 test "`insertSlice` inserts a string into an already created string" {
     var string = try String(u8).copyConst(page_allocator, "hello!");
     try string.insertSlice(5, "lo");
-    testing.expectEqualSlices(u8, string.sliceConst(), "hellolo!");
+    testing.expectEqualStrings(string.sliceConst(), "hellolo!");
     try string.insertSlice(5, ", bo");
-    testing.expectEqualSlices(u8, string.sliceConst(), "hello, bolo!");
+    testing.expectEqualStrings(string.sliceConst(), "hello, bolo!");
 
     var string2 = try String(u8).copyConst(page_allocator, "2345");
     try string2.insertSlice(0, "1");
-    testing.expectEqualSlices(u8, string2.sliceConst(), "12345");
+    testing.expectEqualStrings(string2.sliceConst(), "12345");
 }
 
 test "`insertSliceCopy` inserts a string into a copy of a `String`" {
     var string = try String(u8).copyConst(page_allocator, "hello!");
     const string2 = try string.insertSliceCopy(page_allocator, 5, "lo");
-    testing.expectEqualSlices(u8, string2.sliceConst(), "hellolo!");
+    testing.expectEqualStrings(string2.sliceConst(), "hellolo!");
     const string3 = try string2.insertSliceCopy(page_allocator, 5, ", bo");
-    testing.expectEqualSlices(u8, string3.sliceConst(), "hello, bolo!");
+    testing.expectEqualStrings(string3.sliceConst(), "hello, bolo!");
 
     // original string remains the same
-    testing.expectEqualSlices(u8, string.sliceConst(), "hello!");
+    testing.expectEqualStrings(string.sliceConst(), "hello!");
 }
 
 test "`delete` deletes" {
     var string = try String(u8).copyConst(page_allocator, "hello!");
     string.delete(1, 4, DeleteOptions{});
-    testing.expectEqualSlices(u8, string.sliceConst(), "ho!");
+    testing.expectEqualStrings(string.sliceConst(), "ho!");
     testing.expectEqual(string.capacity, 6);
 
     var string2 = try String(u8).copyConst(page_allocator, "hello, there!");
     string2.delete(0, 3, DeleteOptions{});
-    testing.expectEqualSlices(u8, string2.sliceConst(), "lo, there!");
+    testing.expectEqualStrings(string2.sliceConst(), "lo, there!");
     testing.expectEqual(string2.capacity, 13);
 
     var string3 = try String(u8).copyConst(page_allocator, "hello, there!");
     string3.delete(4, 5, DeleteOptions{});
-    testing.expectEqualSlices(u8, string3.sliceConst(), "hell, there!");
+    testing.expectEqualStrings(string3.sliceConst(), "hell, there!");
     testing.expectEqual(string3.capacity, 13);
 }
 
 test "`delete` deletes and shrinks if given the option" {
     var string = try String(u8).copyConst(page_allocator, "hello!");
     string.delete(1, 4, DeleteOptions{ .shrink = true });
-    testing.expectEqualSlices(u8, string.sliceConst(), "ho!");
+    testing.expectEqualStrings(string.sliceConst(), "ho!");
     testing.expectEqual(string.capacity, 3);
 
     var string2 = try String(u8).copyConst(page_allocator, "hello, there!");
     string2.delete(0, 3, DeleteOptions{ .shrink = true });
-    testing.expectEqualSlices(u8, string2.sliceConst(), "lo, there!");
+    testing.expectEqualStrings(string2.sliceConst(), "lo, there!");
     testing.expectEqual(string2.capacity, 10);
 
     var string3 = try String(u8).copyConst(page_allocator, "hello, there!");
     string3.delete(4, 5, DeleteOptions{ .shrink = true });
-    testing.expectEqualSlices(u8, string3.sliceConst(), "hell, there!");
+    testing.expectEqualStrings(string3.sliceConst(), "hell, there!");
     testing.expectEqual(string3.capacity, 12);
 }
 
@@ -480,21 +480,21 @@ test "`format` returns a custom format instead of everything" {
         .{ string2, @as(u1, 1) },
     );
 
-    testing.expectEqualSlices(u8, format_output, "hello! 1!");
+    testing.expectEqualStrings(format_output, "hello! 1!");
 }
 
 test "`deleteCopy` deletes" {
     var string = try String(u8).copyConst(page_allocator, "hello, bolo!");
     const string2 = try string.deleteCopy(page_allocator, 1, 4);
-    testing.expectEqualSlices(u8, string2.sliceConst(), "ho, bolo!");
+    testing.expectEqualStrings(string2.sliceConst(), "ho, bolo!");
     testing.expectEqual(string2.capacity, 9);
 
     const string3 = try string2.deleteCopy(page_allocator, 2, 8);
-    testing.expectEqualSlices(u8, string3.sliceConst(), "ho!");
+    testing.expectEqualStrings(string3.sliceConst(), "ho!");
     testing.expectEqual(string3.capacity, 3);
 
     // original string remains the same
-    testing.expectEqualSlices(u8, string.sliceConst(), "hello, bolo!");
+    testing.expectEqualStrings(string.sliceConst(), "hello, bolo!");
     testing.expectEqual(string.capacity, 12);
 }
 
@@ -511,7 +511,7 @@ test "`fromFormat` returns a correct `String`" {
     const expected_slice = "/home/gonz/.zshrc:5:3";
     const expected_capacity = expected_slice.len;
 
-    testing.expectEqualSlices(u8, string_from_format.sliceConst(), expected_slice);
+    testing.expectEqualStrings(string_from_format.sliceConst(), expected_slice);
     testing.expectEqual(string_from_format.capacity, expected_capacity);
     testing.expectEqual(string_from_format.allocator, page_allocator);
 }
