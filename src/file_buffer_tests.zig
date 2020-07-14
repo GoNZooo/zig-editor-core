@@ -44,11 +44,11 @@ fn u8ToU8(allocator: *mem.Allocator, string: []const u8) ![]u8 {
 
 test "`deinit` frees the memory in the `FileBuffer` without `deinit()` present" {
     var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
-    var buffer = try FileBuffer([]u8, u8ToU8).init(&testing_allocator.allocator, FileBufferOptions{});
-    var string1 = try heap.page_allocator.dupe(u8, "hello"[0..]);
-    var string2 = try heap.page_allocator.dupe(u8, "there"[0..]);
-    var string3 = try heap.page_allocator.dupe(u8, "handsome"[0..]);
-    const lines_to_add = ([_][]u8{ string1, string2, string3 })[0..];
+    var buffer = try FileBuffer([]const u8, u8ToU8).init(
+        &testing_allocator.allocator,
+        FileBufferOptions{},
+    );
+    const lines_to_add = ([_][]const u8{ "hello", "there", "handsome" })[0..];
     try buffer.append(&testing_allocator.allocator, lines_to_add);
     const buffer_lines = buffer.lines();
     testing.expectEqual(buffer.count, 3);
