@@ -83,9 +83,6 @@ pub fn FileBuffer(comptime T: type, comptime tFromU8: TFromU8Function(T)) type {
         /// If the line stored in the `FileBuffer` has a `deinit()` method, it will be run
         /// automatically.
         pub fn deinit(self: *Self) void {
-            // @TODO: rethink assumption that these copied lines need to be deinitialized by the buffer
-            // since we're already copying theme explicitly. If the file buffer actually needs to take
-            // ownership we can skip the copy
             if (hasDeinit) (for (self.__lines[0..self.count]) |*l| l.deinit());
             self.allocator.free(self.__lines);
             self.count = 0;
