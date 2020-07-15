@@ -69,7 +69,7 @@ test "supports `loadRelativeFile`" {
     testing.expectEqualStrings(line3, "there");
 
     const line4 = lines[3].sliceConst();
-    testing.expectEqualStrings(line4, "you    handsome");
+    testing.expectEqualStrings(line4, "you    handsome ");
 
     const line5 = lines[4].sliceConst();
     testing.expectEqualStrings(line5, "devil, you");
@@ -102,7 +102,7 @@ test "`init` with `path_to_relative_file` loads file immediately" {
     testing.expectEqualStrings(line3, "there");
 
     const line4 = lines[3].sliceConst();
-    testing.expectEqualStrings(line4, "you    handsome");
+    testing.expectEqualStrings(line4, "you    handsome ");
 
     const line5 = lines[4].sliceConst();
     testing.expectEqualStrings(line5, "devil, you");
