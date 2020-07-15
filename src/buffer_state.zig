@@ -127,7 +127,7 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
 
             const starting_character = buffer.lines()[cursor.line].sliceConst()[cursor.column];
             var seen_space = !(starting_character != ' ');
-            var seen_non_word_character = nonWordCharacter(starting_character);
+            var seen_non_word_character = isNonWordCharacter(starting_character);
 
             for (buffer.lines()[cursor.line..]) |l| {
                 if (l.isEmpty()) {
@@ -139,7 +139,7 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
                         return Cursor{ .line = line, .column = column };
                     }
 
-                    if (nonWordCharacter(c) and !seen_non_word_character) {
+                    if (isNonWordCharacter(c) and !seen_non_word_character) {
                         return Cursor{ .line = line, .column = column };
                     }
 
@@ -168,7 +168,7 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
 
             const starting_character = buffer.lines()[cursor.line].sliceConst()[cursor.column];
             var seen_space = starting_character == ' ';
-            var seen_non_word_character = nonWordCharacter(starting_character);
+            var seen_non_word_character = isNonWordCharacter(starting_character);
 
             var first_iteration = true;
             var line_iterator = buffer.iteratorAt(line);
@@ -201,7 +201,7 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
                         return Cursor{ .line = line, .column = column_iterator.column() };
                     }
 
-                    if (nonWordCharacter(c) and !seen_non_word_character) {
+                    if (isNonWordCharacter(c) and !seen_non_word_character) {
                         return Cursor{ .line = line, .column = column_iterator.column() };
                     }
 
@@ -217,7 +217,7 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
     };
 }
 
-fn nonWordCharacter(c: u8) bool {
+fn isNonWordCharacter(c: u8) bool {
     return switch (c) {
         // @TODO: make this a proper list of symbols that are themselves word stoppers
         ',', '.', '-', '(', ')', '/' => true,

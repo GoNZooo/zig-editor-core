@@ -112,9 +112,7 @@ test "`handleKey` handles `w` properly" {
         page_allocator,
         BufferStateOptions{
             .path_to_relative_file = test_file_path,
-            .from_file_options = FromFileOptions{
-                .max_size = 128,
-            },
+            .from_file_options = FromFileOptions{ .max_size = 128 },
         },
         FileBufferOptions{},
     );
