@@ -14,7 +14,7 @@ const Cursor = struct {
 };
 
 pub const BufferStateOptions = struct {
-    pathToRelativeFile: ?[]const u8 = null,
+    path_to_relative_file: ?[]const u8 = null,
     from_file_options: ?FromFileOptions = null,
 };
 
@@ -35,7 +35,7 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
             file_buffer_options: FileBufferOptions,
         ) !Self {
             var buffer: FileBuffer(T, tFromU8) = undefined;
-            if (options.pathToRelativeFile) |path| {
+            if (options.path_to_relative_file) |path| {
                 const ff_options = if (options.from_file_options) |o| o else FromFileOptions{
                     .max_size = 256,
                 };

@@ -74,11 +74,11 @@ test "supports `loadRelativeFile`" {
     testing.expectEqualStrings(line5, "devil, you");
 }
 
-test "`init` with `pathToRelativeFile` loads file immediately" {
+test "`init` with `path_to_relative_file` loads file immediately" {
     var state = try U8BufferState.init(
         page_allocator,
         BufferStateOptions{
-            .pathToRelativeFile = test_file_path,
+            .path_to_relative_file = test_file_path,
             .from_file_options = FromFileOptions{
                 .max_size = 128,
             },
@@ -111,7 +111,7 @@ test "`handleKey` handles `w` properly" {
     var state = try U8BufferState.init(
         page_allocator,
         BufferStateOptions{
-            .pathToRelativeFile = test_file_path,
+            .path_to_relative_file = test_file_path,
             .from_file_options = FromFileOptions{
                 .max_size = 128,
             },
