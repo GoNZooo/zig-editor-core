@@ -1,12 +1,13 @@
+const std = @import("std");
+const mem = std.mem;
+const debug = std.debug;
+
 const file_buffer = @import("./file_buffer.zig");
 const FileBuffer = @import("./file_buffer.zig").FileBuffer;
 const FileBufferOptions = @import("./file_buffer.zig").FileBufferOptions;
 const FromFileOptions = @import("./file_buffer.zig").FromFileOptions;
 const vim = @import("./vim.zig");
 const String = @import("./string.zig").String;
-
-const std = @import("std");
-const mem = std.mem;
 
 const Cursor = struct {
     column: usize,
@@ -86,7 +87,7 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
             if (try vim.handleKey(self.allocator, key, &self.vim_state)) |command| {
                 switch (command) {
                     .MotionOnly => |command_data| {
-                        self.handleMotion(command_data.motion);
+                        try self.handleMotion(command_data.motion);
                     },
                     .Unset, .Undo, .Redo, .EnterInsertMode, .ExitInsertMode => unreachable,
                     .BeginMacro, .EndMacro => unreachable,
@@ -98,7 +99,7 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
             }
         }
 
-        fn handleMotion(self: *Self, motion: vim.Motion) void {
+        fn handleMotion(self: *Self, motion: vim.Motion) !void {
             switch (motion) {
                 .UntilNextWord => |range| {
                     var i: u32 = 0;
@@ -106,10 +107,10 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
                         self.cursor = findNextWord(self.cursor, self.buffer);
                     }
                 },
-                .UntilPreviousWord => |range| {
+                .UntilStartOfPreviousWord => |range| {
                     var i: u32 = 0;
                     while (i < range) : (i += 1) {
-                        self.cursor = findPreviousWord(self.cursor, self.buffer);
+                        self.cursor = try findStartOfPreviousWord(self.cursor, self.buffer);
                     }
                 },
                 else => unreachable,
@@ -158,7 +159,7 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
             return cursor;
         }
 
-        fn findPreviousWord(cursor: Cursor, buffer: FileBuffer(T, tFromU8)) Cursor {
+        fn findStartOfPreviousWord(cursor: Cursor, buffer: FileBuffer(T, tFromU8)) !Cursor {
             if (buffer.lines()[cursor.line].isEmpty()) {
                 return Cursor{ .line = cursor.line - 1, .column = 0 };
             }
@@ -170,7 +171,6 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
             var seen_space = starting_character == ' ';
             var seen_non_word_character = isNonWordCharacter(starting_character);
 
-            var first_iteration = true;
             var line_iterator = buffer.iteratorAt(line);
             while (line_iterator.previous()) |l| : (line -= 1) {
                 if (l.isEmpty()) {
@@ -190,7 +190,8 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
                 while (column_iterator.previous()) |c| {
                     if (seen_space) {
                         if (column_iterator.peekPrevious()) |previous_character| {
-                            if (previous_character == ' ') {
+                            // so that we don't recognize several spaces as words
+                            if (previous_character == ' ' and c != ' ') {
                                 return Cursor{ .line = line, .column = column_iterator.column() };
                             }
                         }
@@ -208,6 +209,7 @@ pub fn BufferState(comptime T: type, comptime tFromU8: file_buffer.TFromU8Functi
                     if (c == ' ') seen_space = true;
                 }
 
+                // we've met a reverse newline, in a sense, which counts as basically a space
                 seen_space = true;
                 column = null;
             }
@@ -224,3 +226,5 @@ fn isNonWordCharacter(c: u8) bool {
         else => false,
     };
 }
+
+const word_characters = "abcdefghijklmnopqrstuvwxyzABCGDEFGHIJKLMNOPQRSTUVWXYZ1234567890";

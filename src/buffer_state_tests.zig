@@ -1,3 +1,9 @@
+const std = @import("std");
+const page_allocator = std.heap.page_allocator;
+const testing = std.testing;
+const meta = std.meta;
+const debug = std.debug;
+
 const buffer_state = @import("./buffer_state.zig");
 const BufferState = buffer_state.BufferState;
 const BufferStateOptions = buffer_state.BufferStateOptions;
@@ -9,11 +15,6 @@ const file_buffer = @import("./file_buffer.zig");
 const FromFileOptions = file_buffer.FromFileOptions;
 const String = @import("./string.zig").String;
 const FileBufferOptions = file_buffer.FileBufferOptions;
-
-const std = @import("std");
-const page_allocator = std.heap.page_allocator;
-const testing = std.testing;
-const meta = std.meta;
 
 const U8BufferState = BufferState(String(u8), String(u8).copyConst);
 
@@ -68,7 +69,7 @@ test "supports `loadRelativeFile`" {
     testing.expectEqualStrings(line3, "there");
 
     const line4 = lines[3].sliceConst();
-    testing.expectEqualStrings(line4, "you handsome");
+    testing.expectEqualStrings(line4, "you    handsome");
 
     const line5 = lines[4].sliceConst();
     testing.expectEqualStrings(line5, "devil, you");
@@ -101,13 +102,13 @@ test "`init` with `path_to_relative_file` loads file immediately" {
     testing.expectEqualStrings(line3, "there");
 
     const line4 = lines[3].sliceConst();
-    testing.expectEqualStrings(line4, "you handsome");
+    testing.expectEqualStrings(line4, "you    handsome");
 
     const line5 = lines[4].sliceConst();
     testing.expectEqualStrings(line5, "devil, you");
 }
 
-test "`handleKey` handles `w` properly" {
+test "`handleKey` handles `w` & `b` properly" {
     var state = try U8BufferState.init(
         page_allocator,
         BufferStateOptions{
@@ -136,7 +137,7 @@ test "`handleKey` handles `w` properly" {
 
     try state.handleKey(w);
     testing.expectEqual(state.cursor.line, 3);
-    testing.expectEqual(state.cursor.column, 4);
+    testing.expectEqual(state.cursor.column, 7);
 
     try state.handleKey(w);
     testing.expectEqual(state.cursor.line, 4);
@@ -162,7 +163,7 @@ test "`handleKey` handles `w` properly" {
 
     try state.handleKey(b);
     testing.expectEqual(state.cursor.line, 3);
-    testing.expectEqual(state.cursor.column, 4);
+    testing.expectEqual(state.cursor.column, 7);
 
     try state.handleKey(b);
     testing.expectEqual(state.cursor.line, 3);

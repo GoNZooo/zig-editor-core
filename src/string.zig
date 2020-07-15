@@ -70,6 +70,34 @@ pub fn StringIterator(comptime T: type) type {
             }
         }
 
+        pub fn skipForwards(self: *Self, steps: usize) !void {
+            const skip_index = if (self.__current) |current| current else 0;
+            if (self.__data.len >= skip_index + steps) {
+                self.__current = self.__current.? + steps;
+            } else {
+                return error.OutOfBoundsForwardSkip;
+            }
+        }
+
+        pub fn skipBackwards(self: *Self, steps: usize) !void {
+            const skip_index = if (self.__current) |*current| current.* else 0;
+            if (skip_index - steps > 0) {
+                self.__current = self.__current.? - steps;
+            } else {
+                return error.OutOfBoundsBackwardSkip;
+            }
+        }
+
+        pub fn skipCharactersBackwards(self: *Self, characters: []const u8) !void {
+            if (self.__current) |*current| {
+                if (mem.indexOfScalar(u8, characters, self.__data[current.*]) != null) {
+                    try self.skipBackwards(1);
+                }
+            } else {
+                return error.SkippingBackwardsWithNoCurrentIteratorValue;
+            }
+        }
+
         pub fn column(self: Self) usize {
             return if (self.__current) |c| c else self.__starting_position;
         }

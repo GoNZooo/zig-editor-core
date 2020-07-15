@@ -393,6 +393,6 @@ test "`fromRelativeFile` reads a file properly into the buffer" {
     testing.expectEqualStrings(line1, "hello");
     testing.expectEqualStrings(line2, "");
     testing.expectEqualStrings(line3, "there");
-    testing.expectEqualStrings(line4, "you handsome");
+    testing.expectEqualStrings(line4, "you    handsome");
     testing.expectEqualStrings(line5, "devil, you");
 }

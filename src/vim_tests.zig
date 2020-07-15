@@ -179,9 +179,9 @@ test "`b` = 'move back one word'" {
     testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
     switch (first_command) {
         .MotionOnly => |command_data| {
-            testing.expect(std.meta.activeTag(command_data.motion) == Motion.UntilPreviousWord);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.UntilStartOfPreviousWord);
             switch (command_data.motion) {
-                .UntilPreviousWord => |words| {
+                .UntilStartOfPreviousWord => |words| {
                     testing.expectEqual(words, 1);
                 },
                 else => unreachable,
@@ -231,9 +231,9 @@ test "`51b` = 'move back 51 words'" {
     testing.expect(std.meta.activeTag(first_command) == Command.MotionOnly);
     switch (first_command) {
         .MotionOnly => |command_data| {
-            testing.expect(std.meta.activeTag(command_data.motion) == Motion.UntilPreviousWord);
+            testing.expect(std.meta.activeTag(command_data.motion) == Motion.UntilStartOfPreviousWord);
             switch (command_data.motion) {
-                .UntilPreviousWord => |words| {
+                .UntilStartOfPreviousWord => |words| {
                     testing.expectEqual(words, 51);
                 },
                 else => unreachable,
