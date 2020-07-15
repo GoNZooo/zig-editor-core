@@ -60,7 +60,7 @@ pub fn FileBuffer(comptime T: type, comptime tFromU8: TFromU8Function(T)) type {
         const Self = @This();
         const Lines = []T;
         const ConstLines = []const T;
-        const hasDeinit = @typeInfo(T) == .Struct and @hasDecl(T, "deinit");
+        const has_deinit = @typeInfo(T) == .Struct and @hasDecl(T, "deinit");
 
         count: usize,
         capacity: usize,
@@ -85,7 +85,7 @@ pub fn FileBuffer(comptime T: type, comptime tFromU8: TFromU8Function(T)) type {
         /// If the line stored in the `FileBuffer` has a `deinit()` method, it will be run
         /// automatically.
         pub fn deinit(self: *Self) void {
-            if (hasDeinit) (for (self.__lines[0..self.count]) |*l| l.deinit());
+            if (has_deinit) (for (self.__lines[0..self.count]) |*l| l.deinit());
             self.allocator.free(self.__lines);
             self.count = 0;
             self.capacity = 0;
@@ -237,7 +237,7 @@ pub fn FileBuffer(comptime T: type, comptime tFromU8: TFromU8Function(T)) type {
 
             var allocated_lines = self.__lines;
             for (self.__lines[start..end]) |*removed_line| {
-                if (hasDeinit) removed_line.deinit() else self.allocator.free(removed_line.*);
+                if (has_deinit) removed_line.deinit() else self.allocator.free(removed_line.*);
             }
 
             mem.copy(T, allocated_lines[0..start], lines_before_deletion);
