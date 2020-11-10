@@ -15,8 +15,12 @@ const FromFileOptions = file_buffer.FromFileOptions;
 const String = @import("./string.zig").String;
 const U8FileBuffer = FileBuffer(String(u8), String(u8).copyConst);
 
+const test_utilities = @import("./test_utilities.zig");
+const TestAllocator = test_utilities.TestAllocator;
+const checkLeakCount = test_utilities.checkLeakCount;
+
 test "`deinit` frees the memory in the `FileBuffer`" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     var buffer = try U8FileBuffer.init(
         &testing_allocator.allocator,
         FileBufferOptions{},
@@ -31,9 +35,9 @@ test "`deinit` frees the memory in the `FileBuffer`" {
     testing.expectEqual(buffer.count, 2);
     testing.expectEqual(buffer.capacity, 2);
     buffer.deinit();
-    try testing_allocator.validate();
     testing.expectEqual(buffer.count, 0);
     testing.expectEqual(buffer.capacity, 0);
+    try checkLeakCount(&testing_allocator);
 }
 
 fn u8ToU8(allocator: *mem.Allocator, string: []const u8) ![]u8 {
@@ -43,7 +47,7 @@ fn u8ToU8(allocator: *mem.Allocator, string: []const u8) ![]u8 {
 }
 
 test "`deinit` frees the memory in the `FileBuffer` without `deinit()` present" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     var buffer = try FileBuffer([]const u8, u8ToU8).init(
         &testing_allocator.allocator,
         FileBufferOptions{},
@@ -54,9 +58,9 @@ test "`deinit` frees the memory in the `FileBuffer` without `deinit()` present" 
     testing.expectEqual(buffer.count, 3);
     testing.expectEqual(buffer.capacity, 3);
     buffer.deinit();
-    try testing_allocator.validate();
     testing.expectEqual(buffer.count, 0);
     testing.expectEqual(buffer.capacity, 0);
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`append` appends lines" {

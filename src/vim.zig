@@ -959,7 +959,7 @@ fn handleWaitingForSlot(
 
 pub const ESCAPE_KEY = Key{ .key_code = '\x1b' };
 
-fn debugPanic(comptime format: []const u8, args: var) void {
+fn debugPanic(comptime format: []const u8, args: anytype) void {
     switch (std.builtin.mode) {
         .Debug => std.debug.panic(format, args),
         else => {},

@@ -12,6 +12,10 @@ const CommandBuilderData = vim.CommandBuilderData;
 const Command = vim.Command;
 const Motion = vim.Motion;
 
+const test_utilities = @import("./test_utilities.zig");
+const TestAllocator = test_utilities.TestAllocator;
+const checkLeakCount = test_utilities.checkLeakCount;
+
 fn stringToKeys(comptime size: usize, string: *const [size:0]u8) [size]Key {
     var keys: [size]Key = undefined;
     for (string) |character, index| {
@@ -26,7 +30,8 @@ fn characterToKey(character: u8) Key {
 }
 
 test "`dd` creates a delete command" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
+    // var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
     const input = "dd";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -48,7 +53,7 @@ test "`dd` creates a delete command" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`dddd` = two delete commands" {
@@ -76,7 +81,7 @@ test "`dddd` = two delete commands" {
 }
 
 test "`ddde` = two delete commands, last one until end of word" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "ddde";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -112,11 +117,11 @@ test "`ddde` = two delete commands, last one until end of word" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`dw` = 'delete until next word'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "dw";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -138,11 +143,11 @@ test "`dw` = 'delete until next word'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`w` = 'move forward one word'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "w";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -164,11 +169,11 @@ test "`w` = 'move forward one word'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`b` = 'move back one word'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -190,11 +195,11 @@ test "`b` = 'move back one word'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`51w` = 'move forward 51 words'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "51w";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -216,11 +221,11 @@ test "`51w` = 'move forward 51 words'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`51b` = 'move back 51 words'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "51b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -242,11 +247,11 @@ test "`51b` = 'move back 51 words'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`dj` = 'delete one line downwards'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "dj";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -268,11 +273,11 @@ test "`dj` = 'delete one line downwards'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`dk` = 'delete one line upwards'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "dk";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -294,11 +299,11 @@ test "`dk` = 'delete one line upwards'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`5dj` = 'delete 5 lines downwards'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "5dj";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -320,11 +325,11 @@ test "`5dj` = 'delete 5 lines downwards'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`5dk` = 'delete 5 lines upwards'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "5dk";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -346,11 +351,11 @@ test "`5dk` = 'delete 5 lines upwards'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`5dd` = 'delete 4 lines downwards'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "5dd";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -372,11 +377,11 @@ test "`5dd` = 'delete 4 lines downwards'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`52dd` = 'delete 51 lines downwards'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "52dd";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -398,11 +403,11 @@ test "`52dd` = 'delete 51 lines downwards'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`52dj` = 'delete 52 lines downwards'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "52dj";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -424,11 +429,11 @@ test "`52dj` = 'delete 52 lines downwards'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`5232dj` = 'delete 5232 lines downwards'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "5232dj";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -450,11 +455,11 @@ test "`5232dj` = 'delete 5232 lines downwards'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`5232dj2301dk` = 'delete 5232 lines downwards' & 'delete 2301 lines upwards'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "5232dj2301dk";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -490,11 +495,11 @@ test "`5232dj2301dk` = 'delete 5232 lines downwards' & 'delete 2301 lines upward
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`5232yy` = 'yank 5231 lines downwards'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "5232yy";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -516,11 +521,11 @@ test "`5232yy` = 'yank 5231 lines downwards'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`522yj201yk` = 'yank 522 lines downwards' & 'yank 231 lines upwards'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "522yj201yk";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -556,11 +561,11 @@ test "`522yj201yk` = 'yank 522 lines downwards' & 'yank 231 lines upwards'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`df)` = 'delete to and including )'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "df)";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -582,11 +587,11 @@ test "`df)` = 'delete to and including )'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`dF)` = 'delete back to and including )'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "dF)";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -608,11 +613,11 @@ test "`dF)` = 'delete back to and including )'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`dt)` = 'delete to but excluding )'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "dt)";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -634,11 +639,11 @@ test "`dt)` = 'delete to but excluding )'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`dT)` = 'delete back to but excluding )'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "dT)";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -660,11 +665,11 @@ test "`dT)` = 'delete back to but excluding )'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`\"add` = 'delete current line into register a'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "\"add";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -687,11 +692,11 @@ test "`\"add` = 'delete current line into register a'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`\"+5dj` = 'delete 5 lines down into register +'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "\"+5dj";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -714,11 +719,11 @@ test "`\"+5dj` = 'delete 5 lines down into register +'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`p` = 'paste forwards'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "p";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -735,11 +740,11 @@ test "`p` = 'paste forwards'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`\"a3P` = 'paste backwards 3 times from register a'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "\"a3P";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -756,11 +761,11 @@ test "`\"a3P` = 'paste backwards 3 times from register a'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`d$` = 'delete until end of line'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "d$";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -783,11 +788,11 @@ test "`d$` = 'delete until end of line'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`d^` = 'delete until beginning of line'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "d^";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -810,11 +815,11 @@ test "`d^` = 'delete until beginning of line'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`cc` = 'change current line'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "cc";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -837,11 +842,11 @@ test "`cc` = 'change current line'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`cfe` = 'change until e forwards'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "cfe";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -864,11 +869,11 @@ test "`cfe` = 'change until e forwards'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`\"*cT$` = 'change backwards until but excluding the character $ into register *'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "\"*cT$";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -891,11 +896,11 @@ test "`\"*cT$` = 'change backwards until but excluding the character $ into regi
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`15c$` = 'change to end of line downwards 14 lines'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "15c$";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -918,11 +923,11 @@ test "`15c$` = 'change to end of line downwards 14 lines'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`15j` = 'move down 15 lines'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "15j";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -945,11 +950,11 @@ test "`15j` = 'move down 15 lines'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`14$` = 'move to the end of the line, 14 lines down'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "14$";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -972,11 +977,11 @@ test "`14$` = 'move to the end of the line, 14 lines down'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`3f\"` = 'move to the third ocurrence forwards of \"'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "3f\"";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -999,11 +1004,11 @@ test "`3f\"` = 'move to the third ocurrence forwards of \"'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`150F(` = 'move unto the 150th ocurrence backwards of ('" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "150F(";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1026,11 +1031,11 @@ test "`150F(` = 'move unto the 150th ocurrence backwards of ('" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`2T(` = 'move to the 2nd ocurrence backwards of ('" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "2T(";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1053,11 +1058,11 @@ test "`2T(` = 'move to the 2nd ocurrence backwards of ('" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`15t)` = 'move to the 15th ocurrence forwards of )'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "15t)";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1080,11 +1085,11 @@ test "`15t)` = 'move to the 15th ocurrence forwards of )'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`\"u2d}` = 'delete 2 paragraphs forwards into register u'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "\"u2d}";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1107,11 +1112,11 @@ test "`\"u2d}` = 'delete 2 paragraphs forwards into register u'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`\"o15y{` = 'yank 15 paragraphs backwards into register o'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "\"o15y{";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1134,11 +1139,11 @@ test "`\"o15y{` = 'yank 15 paragraphs backwards into register o'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`}2{` = 'go forward one paragraph, go back two paragraphs'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "}2{";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1175,11 +1180,11 @@ test "`}2{` = 'go forward one paragraph, go back two paragraphs'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`\"ay0\"a3p` = 'yank until column zero into register a, paste from register a 3 times'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "\"ay0\"a3p";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1204,11 +1209,11 @@ test "`\"ay0\"a3p` = 'yank until column zero into register a, paste from registe
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`maj'a` = 'set mark a, move one line down, move to mark a's line'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "maj'a";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1249,11 +1254,11 @@ test "`maj'a` = 'set mark a, move one line down, move to mark a's line'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`maj`a` = 'set mark a, move one line down, move to mark a's position'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "maj`a";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1294,11 +1299,11 @@ test "`maj`a` = 'set mark a, move one line down, move to mark a's position'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`d`a` = 'delete until mark a's position'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "d`a";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1320,11 +1325,11 @@ test "`d`a` = 'delete until mark a's position'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`d'a` = 'delete until mark a's line'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "d'a";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1346,11 +1351,11 @@ test "`d'a` = 'delete until mark a's line'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`9l22h` = 'go forward 9 characters, go back 22 characters'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "9l22h";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1387,11 +1392,11 @@ test "`9l22h` = 'go forward 9 characters, go back 22 characters'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`\"aci\"` = 'change inside double quotes and save old content to register a'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "\"aci\"";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1414,11 +1419,11 @@ test "`\"aci\"` = 'change inside double quotes and save old content to register 
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`\"adi\"15k\"a2p` = 'delete inside double quotes into register a, move up, paste from it'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "\"adi\"15k\"a2p";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1464,11 +1469,11 @@ test "`\"adi\"15k\"a2p` = 'delete inside double quotes into register a, move up,
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`cs\"` = 'change surrounding double quotes" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "cs\"";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1491,11 +1496,11 @@ test "`cs\"` = 'change surrounding double quotes" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`ds\"` = 'delete surrounding double quotes" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "ds\"";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1518,11 +1523,11 @@ test "`ds\"` = 'delete surrounding double quotes" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`dG` = 'delete until end of file'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "dG";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1545,11 +1550,11 @@ test "`dG` = 'delete until end of file'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`G` = 'go to end of file'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "G";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1572,11 +1577,11 @@ test "`G` = 'go to end of file'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`15G` = 'go to end of file'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "15G";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1599,11 +1604,11 @@ test "`15G` = 'go to end of file'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`\"ad15G` = 'delete until line 15 of file into register a'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "\"ad15G";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1626,11 +1631,11 @@ test "`\"ad15G` = 'delete until line 15 of file into register a'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`d15G` = 'delete until line 15 of file'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "d15G";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1653,11 +1658,11 @@ test "`d15G` = 'delete until line 15 of file'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`dgg` = 'delete until beginning of file'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "dgg";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1680,11 +1685,11 @@ test "`dgg` = 'delete until beginning of file'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`gg` = 'go to beginning of file'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "gg";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1707,11 +1712,11 @@ test "`gg` = 'go to beginning of file'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`15gg` = 'go to line 15 of file'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "15gg";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1734,11 +1739,11 @@ test "`15gg` = 'go to line 15 of file'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`\"ad15gg` = 'delete until line 15 of file into register a'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "\"ad15gg";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1761,11 +1766,11 @@ test "`\"ad15gg` = 'delete until line 15 of file into register a'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`d15gg` = 'delete until line 15 of file'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "d15gg";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1788,11 +1793,11 @@ test "`d15gg` = 'delete until line 15 of file'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`gc20j` = 'comment downwards 20 lines'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "gc20j";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1814,11 +1819,11 @@ test "`gc20j` = 'comment downwards 20 lines'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`20gcj` = 'comment downwards 20 lines'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "20gcj";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1840,11 +1845,11 @@ test "`20gcj` = 'comment downwards 20 lines'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`gc%` = 'comment until matching token'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "gc%";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1860,11 +1865,11 @@ test "`gc%` = 'comment until matching token'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`J` = 'bring line up'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "J";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1880,11 +1885,11 @@ test "`J` = 'bring line up'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`25J` = 'bring line up'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "25J";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1900,11 +1905,11 @@ test "`25J` = 'bring line up'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`u` = 'undo'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "u";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1914,7 +1919,7 @@ test "`u` = 'undo'" {
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.Undo);
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`C-r` = 'redo'" {
@@ -1960,7 +1965,7 @@ test "`iC-[` = 'enter insert mode, then exit it'" {
 }
 
 test "`igaf%C-[` = 'enter insert mode, then exit it'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "igaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -1988,11 +1993,11 @@ test "`igaf%C-[` = 'enter insert mode, then exit it'" {
     const last_command = command_slice[5];
     testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`sgaf%C-[` = 'replace current character, then exit insert mode'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "sgaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -2021,11 +2026,11 @@ test "`sgaf%C-[` = 'replace current character, then exit insert mode'" {
     const last_command = command_slice[5];
     testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`3sgaf%C-[` = 'replace three characters, then exit insert mode'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "3sgaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -2055,11 +2060,11 @@ test "`3sgaf%C-[` = 'replace three characters, then exit insert mode'" {
     const last_command = command_slice[5];
     testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`\"a3sgaf%C-[` = 'replace three characters, then exit insert mode'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "\"a3sgaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -2089,11 +2094,11 @@ test "`\"a3sgaf%C-[` = 'replace three characters, then exit insert mode'" {
     const last_command = command_slice[5];
     testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`ogaf%C-[` = 'insert on new line downwards, then exit insert mode'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "ogaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -2121,11 +2126,11 @@ test "`ogaf%C-[` = 'insert on new line downwards, then exit insert mode'" {
     const last_command = command_slice[5];
     testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`265ogaf%C-[` = 'insert on new line downwards, then exit insert mode'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "265ogaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -2154,11 +2159,11 @@ test "`265ogaf%C-[` = 'insert on new line downwards, then exit insert mode'" {
     const last_command = command_slice[5];
     testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`Ogaf%C-[` = 'insert on new line upwards, then exit insert mode'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "Ogaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -2186,11 +2191,11 @@ test "`Ogaf%C-[` = 'insert on new line upwards, then exit insert mode'" {
     const last_command = command_slice[5];
     testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`15Ogaf%C-[` = 'insert on new line upwards, then exit insert mode'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "15Ogaf%\x1b";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -2219,11 +2224,11 @@ test "`15Ogaf%C-[` = 'insert on new line upwards, then exit insert mode'" {
     const last_command = command_slice[5];
     testing.expect(std.meta.activeTag(last_command) == Command.ExitInsertMode);
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`zt` = 'scroll view so that cursor is at top'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "zt";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -2233,11 +2238,11 @@ test "`zt` = 'scroll view so that cursor is at top'" {
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.ScrollTop);
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`zz` = 'scroll view so that cursor is at center'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "zz";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -2247,11 +2252,11 @@ test "`zz` = 'scroll view so that cursor is at center'" {
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.ScrollCenter);
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`zb` = 'scroll view so that cursor is at bottom'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "zb";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -2261,11 +2266,11 @@ test "`zb` = 'scroll view so that cursor is at bottom'" {
     const first_command = command_slice[0];
     testing.expect(std.meta.activeTag(first_command) == Command.ScrollBottom);
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }
 
 test "`qawibC-[q` = 'record macro into 'a'; insert 'b', escape'" {
-    var testing_allocator = testing.LeakCountAllocator.init(heap.page_allocator);
+    var testing_allocator = TestAllocator{};
     const input = "qawib\x1bq";
     const keys = stringToKeys(input.len, input);
     var state = State.start();
@@ -2349,5 +2354,5 @@ test "`qawibC-[q` = 'record macro into 'a'; insert 'b', escape'" {
         else => unreachable,
     }
     commands.deinit();
-    try testing_allocator.validate();
+    try checkLeakCount(&testing_allocator);
 }

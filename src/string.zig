@@ -348,7 +348,7 @@ pub fn String(comptime T: type) type {
         pub fn fromFormat(
             allocator: *mem.Allocator,
             comptime format_string: []const u8,
-            args: var,
+            args: anytype,
         ) !Self {
             const chars = try fmt.allocPrint(page_allocator, format_string, args);
             const capacity = chars.len;
@@ -383,7 +383,7 @@ pub fn String(comptime T: type) type {
             self: Self,
             comptime formatting: []const u8,
             options: fmt.FormatOptions,
-            out_stream: var,
+            out_stream: anytype,
         ) !void {
             return fmt.format(out_stream, "{}", .{self.__chars[0..self.count]});
         }
