@@ -2356,3 +2356,5 @@ test "`qawibC-[q` = 'record macro into 'a'; insert 'b', escape'" {
     commands.deinit();
     try checkLeakCount(&testing_allocator);
 }
+
+// @TODO: add test for '@' (play macro)

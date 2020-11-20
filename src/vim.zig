@@ -643,6 +643,7 @@ fn handleStart(builder_data: *CommandBuilderData, state: *State, key: Key) !?Com
 
             return null;
         },
+        // @TODO: add '@' (play macro)
 
         // @TODO: add 'C' support
         // Needs to support range + registers
