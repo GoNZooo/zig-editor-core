@@ -118,6 +118,8 @@ const RecordingMacroData = struct {
     commands: ArrayList(Command),
 };
 
+/// This is actually an internal structure but is public because tests are written in a separate
+/// file.
 pub const CommandBuilderData = struct {
     range: ?u32 = null,
     range_modifiers: u32 = 0,
