@@ -262,6 +262,9 @@ pub fn handleKeys(allocator: *mem.Allocator, keys: []const Key, state: *State) !
     return commands;
 }
 
+// This is used internally in `handleStart` in order to construct a part of a complete command.
+// The flow in `handleStart` will then determine whether or not we are also waiting for additional
+// parameters.
 fn commandFromKey(key: Key, register: ?u8, range: ?u32) !Command {
     if (key.left_control) {
         return switch (key.key_code) {
